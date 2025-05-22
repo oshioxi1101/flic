@@ -1,0 +1,185 @@
+﻿@page "/Thongbao"
+@using Flic.Shared
+@using System.Net.Http.Headers
+@inject HttpClient _httpClient
+@inject Blazored.LocalStorage.ILocalStorageService _localStorage
+@inject NavigationManager NavigationManager
+@inject NorthwindService service
+@inject IJSRuntime JsRuntime
+
+<!-- Import Tailwind CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+<!-- Main Content -->
+<main class="container mx-auto px-4 py-12">
+    <h2 class="text-2xl font-semibold text-blue-900 mb-8 border-b-2 border-blue-500 pb-2">Danh sách bài viết</h2>
+
+    @if (isLoading)
+    {
+        <div class="flex justify-center items-center h-48">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
+            <span class="ml-4 text-gray-600">Đang tải...</span>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(ErrMessage))
+    {
+        <div class="bg-red-100 text-red-800 p-4 rounded-md mb-8">
+            <i class="fas fa-exclamation-triangle mr-2"></i> @ErrMessage
+        </div>
+    }
+    else if (list == null || list.Count == 0)
+    {
+        <div class="bg-blue-100 text-blue-800 p-4 rounded-md mb-8">
+            Không có bài viết nào để hiển thị.
+        </div>
+    }
+    else
+    {
+        @if (list.Count > 5)
+        {
+            <!-- Featured Articles (First 5) -->
+            <section class="mb-12">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    @for (int i = 0; i < 5; i++)
+                    {
+                        var item = list[i];
+                        <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+                            <div class="flex flex-col md:flex-row gap-4">
+                                <div class="flex-shrink-0">
+                                    @if (!string.IsNullOrEmpty(item.ImagePath))
+                                    {
+                                        <img class="w-48 h-36 object-cover rounded-md" src="@item.ImagePath" alt="@item.Title">
+                                    }
+                                    else
+                                    {
+                                        <img class="w-48 h-36 object-cover rounded-md" src="images/vya_no_images.jfif" alt="@item.Title">
+                                    }
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-blue-900 mb-2">
+                                        <a href="/view/@item.SectionId/@item.Id" class="hover:text-blue-700 transition-colors">@item.Title</a>
+                                    </h3>
+                                    <div class="text-gray-600 mb-2 line-clamp-3">
+                                        @((MarkupString)item.ArticleAbstract)
+                                    </div>
+                                    <div class="text-sm text-gray-500">
+                                        @(item.CreateDate?.ToString("dd/MM/yyyy") ?? "Không có ngày")
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </section>
+
+            <!-- Divider -->
+            <div class="relative my-12">
+                <hr class="border-gray-200">
+                <span class="absolute top-[-12px] left-0 bg-white px-4 text-blue-600 font-semibold">Các bài viết khác</span>
+            </div>
+
+            <!-- Other Articles -->
+            <section>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    @for (int i = 5; i < list.Count; i++)
+                    {
+                        var item = list[i];
+                        <div class="border-b border-gray-200 py-4">
+                            <h3 class="text-lg font-semibold text-blue-900">
+                                <a href="/view/@item.SectionId/@item.Id" class="hover:text-blue-700 transition-colors">@item.Title</a>
+                            </h3>
+                            <div class="text-sm text-gray-500">
+                                @(item.CreateDate?.ToString("dd/MM/yyyy") ?? "")
+                            </div>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+        else
+        {
+            <!-- All Articles (if 5 or fewer) -->
+            <section>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    @foreach (var item in list)
+                    {
+                        <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+                            <div class="flex flex-col md:flex-row gap-4">
+                                <div class="flex-shrink-0">
+                                    @if (!string.IsNullOrEmpty(item.ImagePath))
+                                    {
+                                        <img class="w-48 h-36 object-cover rounded-md" src="@item.ImagePath" alt="@item.Title">
+                                    }
+                                    else
+                                    {
+                                        <img class="w-48 h-36 object-cover rounded-md" src="images/vya_no_images.jfif" alt="@item.Title">
+                                    }
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-blue-900 mb-2">
+                                        <a href="/view/@item.SectionId/@item.Id" class="hover:text-blue-700 transition-colors">@item.Title</a>
+                                    </h3>
+                                    <div class="text-gray-600 mb-2 line-clamp-3">
+                                        @((MarkupString)item.ArticleAbstract)
+                                    </div>
+                                    <div class="text-sm text-gray-500">
+                                        @(item.CreateDate?.ToString("dd/MM/yyyy") ?? "Không có ngày")
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+    }
+</main>
+
+
+
+@code {
+    string ErrMessage = "";
+    List<Article> list = new List<Article>();
+    bool isLoading = true;
+
+    void OnClick(string link)
+    {
+        NavigationManager.NavigateTo(link, true);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isLoading = true;
+
+            var response = await _httpClient.GetAsync("api/Article/ArticleGetList");
+
+            if (response.IsSuccessStatusCode)
+            {
+                list = await response.Content.ReadFromJsonAsync<List<Article>>();
+
+                if (list != null)
+                {
+                    list = list.OrderByDescending(a => a.CreateDate).ToList();
+                }
+
+                ErrMessage = "";
+            }
+            else
+            {
+                ErrMessage = $"Lỗi: {response.StatusCode}";
+                Console.WriteLine($"API error: {response.StatusCode}");
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Exception: {e.Message}");
+            ErrMessage = $"Đã xảy ra lỗi: {e.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

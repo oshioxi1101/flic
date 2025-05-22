@@ -1,0 +1,106 @@
+﻿@page "/PaymentCallback"
+@using Flic.Shared.Models
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+
+<div class="container mx-auto p-4">
+    <h2 class="text-2xl font-bold mb-4">Kết quả thanh toán</h2>
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        @if (loading)
+        {
+            <p>Đang xử lý...</p>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <p class="text-red-600 font-semibold">Lỗi: @errorMessage</p>
+        }
+        else
+        {
+            <p><strong>Mã hóa đơn:</strong> @response.OrderId</p>
+            <p><strong>Phương thức:</strong> @response.PaymentMethod</p>
+            <p><strong>Mô tả đơn:</strong> @response.OrderDescription</p>
+            <p><strong>Mã thanh toán:</strong> @response.PaymentId</p>
+            <p>
+                <strong>Trạng thái:</strong>
+                @if (response.Success && isValidTime)
+                {
+                    <span class="text-green-600 font-semibold">Thành công</span>
+                }
+                else if (!isValidTime)
+                {
+                    <span class="text-red-600 font-semibold">Không thành công (hết thời gian)</span>
+                }
+                else
+                {
+                    <span class="text-red-600 font-semibold">Không thành công</span>
+                }
+            </p>
+            <p><strong>Mã giao dịch:</strong> @response.TransactionId</p>
+            <p><strong>Response code:</strong> @response.VnPayResponseCode</p>
+
+            @if (dkHocId.HasValue)
+            {
+                <div class="mt-4">
+                    <RadzenButton Text="Xem chi tiết"
+                                  Icon="visibility"
+                                  Click='@(() => NavigationManager.NavigateTo("/DKHocDetail/" + dkHocId.Value))'
+                                  ButtonStyle="ButtonStyle.Primary" />
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private bool loading = true;
+    private string? errorMessage;
+    private PaymentResponseModel response = new();
+    private int? dkHocId;
+    private bool isValidTime;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Lấy nguyên query string (?vnp_Amount=...&vnp_...)
+            var uri   = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+            var query = uri.Query;
+
+            // Gọi API trên server: VNPayQRController.PaymentCallback
+            var apiUrl = $"api/VNPayQR/PaymentCallback{query}";
+            var http   = await Http.GetAsync(apiUrl);
+
+            if (!http.IsSuccessStatusCode)
+            {
+                errorMessage = $"HTTP {(int)http.StatusCode} - {http.ReasonPhrase}";
+                return;
+            }
+
+            response = await http.Content.ReadFromJsonAsync<PaymentResponseModel>() 
+                       ?? throw new InvalidOperationException("Không thể parse kết quả.");
+
+            // Nếu OrderId dạng "DKH-<id>" thì tách ra và kiểm tra thời gian thanh toán
+            if (response.OrderId?.StartsWith("DKH-") == true
+                && int.TryParse(response.OrderId.Substring(4), out var id))
+            {
+                dkHocId = id;
+
+                // Lấy lại bản ghi để kiểm tra NgayThanhtoan
+                var dk = await Http.GetFromJsonAsync<Flic.Shared.Models.DKHoc>($"api/DKHoc/DKHocGetByID/{id}");
+                if (dk?.NgayThanhtoan != null)
+                {
+                    isValidTime = (DateTime.UtcNow - dk.NgayThanhtoan.Value).TotalMinutes <= 30;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+}

@@ -1,0 +1,259 @@
+﻿@page "/tracuu"
+@using Flic.Shared
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+
+<!-- Import Tailwind CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+
+
+<!-- Main Content -->
+<main class="container mx-auto px-4 py-12">
+    <!-- Search Form -->
+    <section class="bg-white p-6 rounded-lg shadow-md mb-12">
+        <h2 class="text-2xl font-semibold text-blue-900 mb-6">Tìm kiếm thông tin đăng ký</h2>
+        <RadzenTemplateForm TItem="TracuuTT" Data=@item Submit=@OnSubmit>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <RadzenLabel Component="CCCD" Text="Số CCCD" class="block text-gray-700 font-medium mb-1" />
+                    <RadzenTextBox Name="CCCD" @bind-Value=@item.CCCD
+                                   class="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500" />
+                    <RadzenRequiredValidator Component="CCCD" Text="Vui lòng nhập số CCCD"
+                                             class="text-red-600 text-sm mt-1" />
+                </div>
+                <div>
+                    <RadzenLabel Component="Mobile" Text="Số điện thoại" class="block text-gray-700 font-medium mb-1" />
+                    <RadzenTextBox Name="Mobile" @bind-Value=@item.Mobile
+                                   class="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500" />
+                    <RadzenRequiredValidator Component="Mobile" Text="Vui lòng nhập số điện thoại"
+                                             class="text-red-600 text-sm mt-1" />
+                </div>
+                <div>
+                    <RadzenLabel Component="Email" Text="Email" class="block text-gray-700 font-medium mb-1" />
+                    <RadzenTextBox Name="Email" @bind-Value=@item.Email
+                                   class="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500" />
+                    <RadzenRequiredValidator Component="Email" Text="Vui lòng nhập email"
+                                             class="text-red-600 text-sm mt-1" />
+                </div>
+                <div class="flex items-end">
+                    <RadzenButton ButtonType="ButtonType.Submit" Text="Tìm"
+                                  class="w-full md:w-auto bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors" />
+                </div>
+            </div>
+        </RadzenTemplateForm>
+    </section>
+
+    <!-- Exam Results Table -->
+    @if (dsTin != null && dsTin.Any())
+    {
+        <section class="bg-white p-6 rounded-lg shadow-md mb-12">
+            <h3 class="text-xl font-semibold text-blue-900 mb-4">Thông tin thi chứng chỉ CNTT cơ bản</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-blue-100 text-blue-900">
+                            <th class="p-4 font-semibold border-b border-gray-200">Thông tin thí sinh</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Thông tin đợt thi</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Thông tin thanh toán</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var it in dsTin)
+                        {
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="p-4 border-b border-gray-200">
+                                    <div class="text-gray-700">
+                                        <span class="font-medium">CCCD:</span> @it.CCCD
+                                    </div>
+                                    <div class="text-gray-700">
+                                        <span class="font-medium">Họ tên:</span> @it.HovaDem @it.Ten
+                                    </div>
+                                </td>
+                                <td class="p-4 border-b border-gray-200">
+                                    <div class="text-gray-700">
+                                        <span class="font-medium">Đợt thi:</span> @it.DotThi,
+                                        <span class="font-medium">Phòng thi:</span> @it.PhongThi,
+                                        <span class="font-medium">SBD:</span> @it.SoBD
+                                    </div>
+                                    <div class="text-gray-700">
+                                        <span class="font-medium">Điểm lý thuyết:</span> @it.DiemLT,
+                                        <span class="font-medium">Điểm thực hành:</span> @it.DiemTH
+                                    </div>
+                                </td>
+                                <td class="p-4 border-b border-gray-200">
+                                    <div class="text-gray-700">
+                                        <span class="font-medium">Lệ phí thi:</span> @it.LePhiThi,
+                                        <span class="font-medium">Lệ phí ôn:</span> @it.LePhiOn
+                                    </div>
+                                    <div class="text-gray-700">
+                                        <span class="font-medium">Trạng thái:</span>
+                                        @if (it.PaymentSuccess != null && it.PaymentSuccess.Value)
+                                        {
+                                            <span class="text-green-600 font-medium">Đã thanh toán</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-red-600 font-medium">Chưa thanh toán</span>
+                                        }
+                                    </div>
+                                    <div class="mt-2">
+                                        <a href="/Tinhoc03Detail/@it.Id"
+                                           class="text-blue-600 hover:text-blue-800 transition-colors">Xem chi tiết</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+    else if (dsTin != null && !dsTin.Any())
+    {
+        <section class="bg-blue-100 text-blue-800 p-4 rounded-md mb-12">
+            Không tìm thấy thông tin thi chứng chỉ CNTT cơ bản cho số CCCD này.
+        </section>
+    }
+
+    <!-- Course Registration Table -->
+    @if (dsDKHoc != null && dsDKHoc.Any())
+    {
+        <section class="bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-xl font-semibold text-blue-900 mb-4">Thông tin đăng ký khóa học</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-blue-100 text-blue-900">
+                            <th class="p-4 font-semibold border-b border-gray-200">STT</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Họ tên</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Địa chỉ</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Điện thoại</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Email</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Lớp học</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Thanh toán</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            int i = 1;
+                            foreach (var it in dsDKHoc)
+                            {
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="p-4 border-b border-gray-200">@i</td>
+                                    <td class="p-4 border-b border-gray-200">@it.HovaDem @it.Ten</td>
+                                    <td class="p-4 border-b border-gray-200">@it.DiaChi</td>
+                                    <td class="p-4 border-b border-gray-200">@it.DienThoai</td>
+                                    <td class="p-4 border-b border-gray-200">@it.Email</td>
+                                    <td class="p-4 border-b border-gray-200">@it.CourseName</td>
+                                    <td class="p-4 border-b border-gray-200">
+                                        @if (it.DaThanhtoan != null && it.DaThanhtoan == 1)
+                                        {
+                                            <span class="text-green-600 font-medium">Đã thanh toán</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-red-600 font-medium">Chưa thanh toán</span>
+                                        }
+                                    </td>
+                                    <td class="p-4 border-b border-gray-200">
+                                        <a href="/DKHocDetail/@it.Id"
+                                           class="text-blue-600 hover:text-blue-800 transition-colors">Xem chi tiết</a>
+                                    </td>
+                                </tr>
+                                i++;
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+    else if (dsDKHoc != null && !dsDKHoc.Any())
+    {
+        <section class="bg-blue-100 text-blue-800 p-4 rounded-md">
+            Không tìm thấy thông tin đăng ký khóa học cho số điện thoại hoặc email này.
+        </section>
+    }
+</main>
+
+
+
+@code {
+    [Parameter]
+    public string Id { get; set; }
+    string ErrMessage = "";
+    TracuuTT item = new TracuuTT();
+    public List<DangkyTH03> dsTin;
+    public List<DKHocView> dsDKHoc;
+
+    protected override async Task OnInitializedAsync()
+    {
+    }
+
+    protected async Task OnSubmit()
+    {
+        try
+        {
+            dsTin = null;
+            dsDKHoc = null;
+
+            if (!string.IsNullOrEmpty(item.CCCD))
+            {
+                var responseTin = await Http.GetAsync("api/DangkyTH03/TH03GetByCCCD/" + item.CCCD);
+                if (responseTin.IsSuccessStatusCode)
+                {
+                    dsTin = await responseTin.Content.ReadFromJsonAsync<List<DangkyTH03>>();
+                }
+                else
+                {
+                    dsTin = new List<DangkyTH03>();
+                }
+            }
+            else
+            {
+                dsTin = new List<DangkyTH03>();
+            }
+
+            if (!string.IsNullOrEmpty(item.Mobile))
+            {
+                var responseHoc = await Http.GetAsync("api/DKHoc/DKHocGetByMobile/" + item.Mobile);
+                if (responseHoc.IsSuccessStatusCode)
+                {
+                    dsDKHoc = await responseHoc.Content.ReadFromJsonAsync<List<DKHocView>>();
+                }
+            }
+
+            if (dsDKHoc == null && !string.IsNullOrEmpty(item.Email))
+            {
+                var responseHoc = await Http.GetAsync("api/DKHoc/DKHocGetByEmail/" + item.Email);
+                if (responseHoc.IsSuccessStatusCode)
+                {
+                    dsDKHoc = await responseHoc.Content.ReadFromJsonAsync<List<DKHocView>>();
+                }
+            }
+
+            dsDKHoc = dsDKHoc ?? new List<DKHocView>();
+
+            if (!dsTin.Any() && !dsDKHoc.Any())
+            {
+                await JsRuntime.InvokeVoidAsync("alert", "Không tìm thấy thông tin!");
+            }
+
+            this.StateHasChanged();
+        }
+        catch (Exception e)
+        {
+            dsTin = new List<DangkyTH03>();
+            dsDKHoc = new List<DKHocView>();
+            await JsRuntime.InvokeVoidAsync("alert", $"Đã xảy ra lỗi: {e.Message}");
+        }
+    }
+
+    void Cancel()
+    {
+        // NavigationManager.NavigateTo("KhoahocList");
+    }
+}

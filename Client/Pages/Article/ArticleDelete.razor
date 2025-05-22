@@ -1,0 +1,64 @@
+﻿@page "/ArticleDelete/{Id:int}"
+@using Flic.Shared
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+
+<div class="flex items-center justify-center min-h-screen bg-gray-50">
+    <div class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-lg">
+        <h2 class="text-2xl font-bold text-red-600 mb-6 text-center">Xóa bài viết</h2>
+        @if (!string.IsNullOrEmpty(ErrMessage))
+        {
+            <div class="mb-4 text-center text-red-500">@ErrMessage</div>
+        }
+        @if (item != null)
+        {
+            <p class="mb-6 text-center text-gray-700">
+                Bạn chắc chắn muốn <span class="text-red-600 font-bold">xóa bài viết</span>:
+                <span class="font-semibold text-indigo-700">"@item.Title"</span>?
+            </p>
+            <div class="flex justify-center gap-6">
+                <button @onclick="Delete"
+                        class="bg-red-600 text-white font-semibold rounded-lg px-6 py-2 hover:bg-red-700 shadow transition">
+                    Xóa
+                </button>
+                <button @onclick="Cancel"
+                        class="bg-gray-200 text-gray-800 font-semibold rounded-lg px-6 py-2 hover:bg-gray-300 shadow transition">
+                    Hủy
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    Article item = new Article();
+    string ErrMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        item = await Http.GetFromJsonAsync<Article>("api/Article/ArticleGetByID/" + Id);
+    }
+    protected async Task Delete()
+    {
+        var response = await Http.DeleteAsync("api/Article/ArticleDelete/" + Id);
+        bool deleteResponse = await response.Content.ReadFromJsonAsync<bool>();
+        if (deleteResponse)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "Deleted Successfully!");
+            NavigationManager.NavigateTo("ArticleList");
+            ErrMessage = "";
+        }
+        else
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "Xóa bài viết thất bại!");
+            ErrMessage = "Không thể xóa bài viết. Vui lòng thử lại.";
+        }
+    }
+    void Cancel()
+    {
+        NavigationManager.NavigateTo("ArticleList");
+    }
+}

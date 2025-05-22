@@ -1,0 +1,373 @@
+﻿@page "/register"
+@layout NoHeaderLayout
+@using Flic.Client.Services
+@using Flic.Shared
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-100 px-4 py-8">
+    <div class="w-full max-w-4xl flex flex-col md:flex-row shadow-2xl rounded-3xl overflow-hidden bg-white/90 backdrop-blur-md">
+        <!-- Info Section -->
+        <div class="hidden md:flex md:w-1/2 bg-gradient-to-br from-indigo-600 to-blue-500 text-white p-10 flex-col justify-center relative">
+            <div class="z-10">
+                <h2 class="text-3xl font-bold mb-6 leading-tight">Tham gia cộng đồng học viên FLIC-VYA</h2>
+                <p class="mb-8 text-lg text-indigo-100">Đăng ký để tiếp cận khoá học chất lượng và nhận ưu đãi độc quyền.</p>
+                <ul class="space-y-5">
+                    <li class="flex items-start">
+                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-white/20 text-white mr-3">
+                            <svg class="h-5 w-5 text-indigo-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                        </span>
+                        <div>
+                            <span class="font-bold">Trải nghiệm học linh hoạt</span>
+                            <p class="text-indigo-200 text-sm mt-1">Truy cập mọi lúc, mọi nơi trên nhiều thiết bị</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-white/20 text-white mr-3">
+                            <svg class="h-5 w-5 text-indigo-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3" />
+                            </svg>
+                        </span>
+                        <div>
+                            <span class="font-bold">Giảng viên tận tâm</span>
+                            <p class="text-indigo-200 text-sm mt-1">Đội ngũ chuyên môn hỗ trợ xuyên suốt</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-white/20 text-white mr-3">
+                            <svg class="h-5 w-5 text-indigo-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7" />
+                            </svg>
+                        </span>
+                        <div>
+                            <span class="font-bold">Chứng chỉ giá trị</span>
+                            <p class="text-indigo-200 text-sm mt-1">Công nhận năng lực sau mỗi khóa học</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div class="absolute right-4 bottom-4 opacity-40 blur-sm pointer-events-none">
+                <img src="/logo.png" alt="Logo" class="w-24">
+            </div>
+        </div>
+
+        <!-- Register Form -->
+        <div class="w-full md:w-1/2 px-8 py-10">
+            <div class="mb-6 text-center">
+                <img src="/logo.png" alt="FLIC Logo" class="h-14 mx-auto mb-3 drop-shadow">
+                <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Đăng ký tài khoản học viên</h1>
+                <p class="text-gray-500 mt-2">Trải nghiệm hệ thống học hiện đại cùng FLIC-VYA</p>
+            </div>
+
+            @if (ShowErrors)
+            {
+                <div class="mb-5 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow animate-pulse">
+                    <div class="flex items-start">
+                        <svg class="h-5 w-5 text-red-500 mt-1 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <div>
+                            <span class="font-semibold text-red-800">Không thể tạo tài khoản</span>
+                            <div class="mt-1 text-red-700 text-sm">
+                                @if (Errors != null && Errors.Any())
+                                {
+                                    <ul class="list-disc pl-5 space-y-1">
+                                        @foreach (var error in Errors)
+                                        {
+                                            <li>@error</li>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <p>Đã xảy ra lỗi. Vui lòng thử lại sau.</p>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <EditForm Model="RegisterModel" OnValidSubmit="HandleRegistration" class="space-y-6">
+                <DataAnnotationsValidator />
+                <div class="space-y-4">
+                    <!-- Username -->
+                    <div>
+                        <label for="username" class="block text-sm font-semibold text-gray-700 mb-1">Tên đăng nhập</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                                </svg>
+                            </span>
+                            <InputText id="username" class="pl-10 pr-3 py-2 w-full border-2 border-gray-200 focus:border-indigo-400 rounded-xl bg-white shadow-sm focus:outline-none transition-all"
+                                       @bind-Value="RegisterModel.Username" placeholder="VD: nguyenvana" />
+                        </div>
+                        <ValidationMessage For="@(() => RegisterModel.Username)" class="mt-1 text-xs text-red-600" />
+                    </div>
+
+                    <!-- Email -->
+                    <div>
+                        <label for="email" class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                                </svg>
+                            </span>
+                            <InputText id="email" type="email" class="pl-10 pr-3 py-2 w-full border-2 border-gray-200 focus:border-indigo-400 rounded-xl bg-white shadow-sm focus:outline-none transition-all"
+                                       @bind-Value="RegisterModel.Email" placeholder="VD: example@gmail.com" />
+                        </div>
+                        <ValidationMessage For="@(() => RegisterModel.Email)" class="mt-1 text-xs text-red-600" />
+                    </div>
+
+                    <!-- Password -->
+                    <div>
+                        <label for="password" class="block text-sm font-semibold text-gray-700 mb-1">Mật khẩu</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                                </svg>
+                            </span>
+                            <InputText id="password" type="@(showPassword ? "text" : "password")"
+                                       class="pl-10 pr-10 py-2 w-full border-2 border-gray-200 focus:border-indigo-400 rounded-xl bg-white shadow-sm focus:outline-none transition-all"
+                                       @bind-Value="RegisterModel.Password" @oninput="CheckPasswordStrength" placeholder="Nhập mật khẩu" />
+                            <span class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                <button type="button" class="text-gray-400 hover:text-gray-600" @onclick="TogglePasswordVisibility">
+                                    @if (showPassword)
+                                    {
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd" />
+                                            <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                                        </svg>
+                                    }
+                                    else
+                                    {
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                                        </svg>
+                                    }
+                                </button>
+                            </span>
+                        </div>
+                        <ValidationMessage For="@(() => RegisterModel.Password)" class="mt-1 text-xs text-red-600" />
+                        @if (!string.IsNullOrEmpty(RegisterModel.Password))
+                        {
+                            <div class="mt-2">
+                                <div class="flex h-2 rounded-full bg-gray-200 overflow-hidden">
+                                    <div class="@GetPasswordStrengthColorBar()" style="width: @(passwordStrength * 25)%"></div>
+                                </div>
+                                <p class="mt-1 text-xs" style="color: @GetStrengthTextColor()">
+                                    @GetPasswordStrengthText()
+                                </p>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div>
+                        <label for="confirmPassword" class="block text-sm font-semibold text-gray-700 mb-1">Xác nhận mật khẩu</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                                </svg>
+                            </span>
+                            <InputText id="confirmPassword" type="@(showConfirmPassword ? "text" : "password")"
+                                       class="pl-10 pr-10 py-2 w-full border-2 border-gray-200 focus:border-indigo-400 rounded-xl bg-white shadow-sm focus:outline-none transition-all"
+                                       @bind-Value="RegisterModel.ConfirmPassword" placeholder="Nhập lại mật khẩu" />
+                            <span class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                <button type="button" class="text-gray-400 hover:text-gray-600" @onclick="ToggleConfirmPasswordVisibility">
+                                    @if (showConfirmPassword)
+                                    {
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd" />
+                                            <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                                        </svg>
+                                    }
+                                    else
+                                    {
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                                        </svg>
+                                    }
+                                </button>
+                            </span>
+                        </div>
+                        <ValidationMessage For="@(() => RegisterModel.ConfirmPassword)" class="mt-1 text-xs text-red-600" />
+                    </div>
+
+                    <!-- Terms -->
+                    <div>
+                        <label class="flex items-center text-xs text-gray-600">
+                            <InputCheckbox id="termsCheck" class="mr-2 focus:ring-indigo-400" @bind-Value="AcceptTerms" />
+                            Tôi đồng ý với <a href="/terms" target="_blank" class="text-indigo-600 hover:underline font-bold">Điều khoản</a> & <a href="/privacy" target="_blank" class="text-indigo-600 hover:underline font-bold">Chính sách</a>
+                        </label>
+                        @if (showTermsError)
+                        {
+                            <p class="mt-1 text-xs text-red-600">Bạn phải đồng ý với điều khoản để tiếp tục</p>
+                        }
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full flex items-center justify-center py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base shadow-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        disabled="@isSubmitting">
+                    @if (isSubmitting)
+                    {
+                        <svg class="animate-spin h-5 w-5 mr-2 text-indigo-200" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Đang xử lý...</span>
+                    }
+                    else
+                    {
+                        <span>Đăng ký</span>
+                    }
+                </button>
+
+                <div class="flex items-center my-6">
+                    <div class="flex-grow border-t border-gray-300"></div>
+                    <span class="mx-3 text-gray-400 text-xs font-bold">Hoặc</span>
+                    <div class="flex-grow border-t border-gray-300"></div>
+                </div>
+
+                <button @onclick="GoogleSignUp" class="w-full flex items-center justify-center py-2.5 rounded-xl border border-gray-200 shadow bg-white font-semibold text-gray-700 hover:bg-gray-50 transition-all text-base">
+                    <svg class="h-5 w-5 mr-2" viewBox="0 0 21 20" fill="none">
+                        <path d="M20.3081 10.2303C20.3081 9.55056 20.253 8.86711 20.1354 8.19836H10.7031V12.0492H16.1046C15.8804 13.2911 15.1602 14.3898 14.1057 15.0879V17.5866H17.3282C19.2205 15.8449 20.3081 13.2728 20.3081 10.2303Z" fill="#3F83F8" />
+                        <path d="M10.7019 20.0006C13.3989 20.0006 15.6734 19.1151 17.3306 17.5865L14.1081 15.0879C13.2115 15.6979 12.0541 16.0433 10.7056 16.0433C8.09669 16.0433 5.88468 14.2832 5.091 11.9169H1.76562V14.4927C3.46322 17.8695 6.92087 20.0006 10.7019 20.0006V20.0006Z" fill="#34A853" />
+                        <path d="M5.08857 11.9169C4.66969 10.6749 4.66969 9.33008 5.08857 8.08811V5.51233H1.76688C0.348541 8.33798 0.348541 11.667 1.76688 14.4927L5.08857 11.9169V11.9169Z" fill="#FBBC04" />
+                        <path d="M10.7019 3.95805C12.1276 3.936 13.5055 4.47247 14.538 5.45722L17.393 2.60218C15.5852 0.904587 13.1858 -0.0287217 10.7019 0.000673888C6.92087 0.000673888 3.46322 2.13185 1.76562 5.51234L5.08732 8.08813C5.87733 5.71811 8.09302 3.95805 10.7019 3.95805V3.95805Z" fill="#EA4335" />
+                    </svg>
+                    Đăng ký với Google
+                </button>
+
+                <div class="text-center mt-6">
+                    <span class="text-sm text-gray-500">
+                        Đã có tài khoản?
+                        <a href="/login" class="ml-1 text-indigo-600 hover:underline font-bold">Đăng nhập ngay</a>
+                    </span>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterModel RegisterModel = new RegisterModel();
+    private bool ShowErrors = false;
+    private IEnumerable<string> Errors;
+    private bool isSubmitting = false;
+    private bool AcceptTerms = false;
+    private bool showTermsError = false;
+    private bool showPassword = false;
+    private bool showConfirmPassword = false;
+    private int passwordStrength = 0;
+
+    private void TogglePasswordVisibility() => showPassword = !showPassword;
+    private void ToggleConfirmPasswordVisibility() => showConfirmPassword = !showConfirmPassword;
+
+    private void CheckPasswordStrength(ChangeEventArgs e)
+    {
+        string password = e.Value?.ToString() ?? "";
+        passwordStrength = 0;
+        if (password.Length >= 8) passwordStrength++;
+        if (System.Text.RegularExpressions.Regex.IsMatch(password, "[A-Z]")) passwordStrength++;
+        if (System.Text.RegularExpressions.Regex.IsMatch(password, "[0-9]")) passwordStrength++;
+        if (System.Text.RegularExpressions.Regex.IsMatch(password, "[^a-zA-Z0-9]")) passwordStrength++;
+    }
+
+    private string GetStrengthTextColor() => passwordStrength switch
+    {
+        1 => "#ef4444", // red-500
+        2 => "#f59e0b", // amber-500
+        3 => "#3b82f6", // blue-500
+        4 => "#10b981", // emerald-500
+        _ => "#6b7280"
+    };
+
+    private string GetPasswordStrengthText() => passwordStrength switch
+    {
+        1 => "Yếu",
+        2 => "Trung bình",
+        3 => "Khá",
+        4 => "Mạnh",
+        _ => ""
+    };
+
+    private string GetPasswordStrengthColorBar() => passwordStrength switch
+    {
+        1 => "bg-red-500 transition-all",
+        2 => "bg-yellow-500 transition-all",
+        3 => "bg-blue-500 transition-all",
+        4 => "bg-green-500 transition-all",
+        _ => ""
+    };
+
+    private async Task HandleRegistration()
+    {
+        if (!AcceptTerms)
+        {
+            showTermsError = true;
+            return;
+        }
+        showTermsError = false;
+        isSubmitting = true;
+        ShowErrors = false;
+
+        try
+        {
+            RegisterModel.Role = "SINHVIEN";
+            var result = await AuthService.Register(RegisterModel);
+
+            if (result.IsSuccessStatusCode)
+            {
+                // Sau khi đăng ký thành công, kiểm tra user đã có student info chưa
+                // Giả sử backend có endpoint api/Student/StudentGetByMSV/{username}
+                var student = await AuthService.GetStudentByUserName(RegisterModel.Username);
+                if (student == null)
+                {
+                    // Chuyển đến trang thêm thông tin sinh viên, truyền username để tự sinh mã SV
+                    NavigationManager.NavigateTo($"/StudentAdd1/{RegisterModel.Username}");
+                }
+                else
+                {
+                    NavigationManager.NavigateTo("/flic");
+                }
+            }
+            else
+            {
+                var content = await result.Content?.ReadAsStringAsync() ?? "";
+                Errors = !string.IsNullOrEmpty(content) ? new[] { content } : new[] { $"Lỗi: {result.StatusCode}" };
+                ShowErrors = true;
+                await JSRuntime.InvokeVoidAsync("scrollTo", 0, 0);
+            }
+        }
+        catch (Exception ex)
+        {
+            Errors = new[] { $"Lỗi: {ex.Message}" };
+            ShowErrors = true;
+            await JSRuntime.InvokeVoidAsync("scrollTo", 0, 0);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+
+    private void GoogleSignUp()
+    {
+        NavigationManager.NavigateTo("/api/GoogleAuth/signin", true);
+    }
+}
+

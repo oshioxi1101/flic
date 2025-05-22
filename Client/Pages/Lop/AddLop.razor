@@ -1,0 +1,195 @@
+﻿<!-- Import Tailwind CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+@page "/LopAdd/"
+@using Flic.Shared
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+
+<div class="min-h-screen bg-gray-100 flex items-center justify-center py-6 px-4">
+    <AuthorizeView>
+        <NotAuthorized>
+            <span class="text-lg font-semibold text-red-600 text-center">You're not authorized</span>
+        </NotAuthorized>
+        <Authorized Context="Auth">
+            <div class="w-full max-w-md bg-white shadow-lg rounded-lg p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-6 text-center">Thêm Lớp học</h3>
+
+                @if (!string.IsNullOrEmpty(ErrMessage))
+                {
+                    <div class="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+                        @ErrMessage
+                    </div>
+                }
+
+                <RadzenTemplateForm TItem="Lop" Data=@item Submit=@OnSubmit class="space-y-4">
+                    <!-- Khóa học -->
+                    <div>
+                        <RadzenLabel Component="KhoahocID"
+                                     Text="Khóa học"
+                                     class="block text-sm font-medium text-gray-700 mb-1" />
+                        <RadzenDropDown TValue="string"
+                                        Data=@KhoahocList
+                                        TextProperty="Name"
+                                        ValueProperty="Id"
+                                        @bind-Value=@item.KhoahocID
+                                        class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                        <RadzenRequiredValidator Component="KhoahocID"
+                                                 Text="Chưa chọn Khóa học"
+                                                 class="text-red-600 text-xs mt-1" />
+                    </div>
+
+                    <!-- Khoa -->
+                    <div>
+                        <RadzenLabel Component="KhoaID"
+                                     Text="Khoa"
+                                     class="block text-sm font-medium text-gray-700 mb-1" />
+                        <RadzenDropDown TValue="string"
+                                        Data=@KhoaList
+                                        TextProperty="Name"
+                                        ValueProperty="Id"
+                                        @bind-Value=@item.KhoaID
+                                        Change="@OnChange"
+                                        class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                        <RadzenRequiredValidator Component="KhoaID"
+                                                 Text="Chưa chọn Khoa"
+                                                 class="text-red-600 text-xs mt-1" />
+                    </div>
+
+                    <!-- Ngành -->
+                    <div>
+                        <RadzenLabel Component="NganhID"
+                                     Text="Ngành"
+                                     class="block text-sm font-medium text-gray-700 mb-1" />
+                        <RadzenDropDown TValue="string"
+                                        Data=@NganhList
+                                        TextProperty="Name"
+                                        ValueProperty="Id"
+                                        @bind-Value=@item.NganhID
+                                        class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                        <RadzenRequiredValidator Component="NganhID"
+                                                 Text="Chưa chọn Ngành"
+                                                 class="text-red-600 text-xs mt-1" />
+                    </div>
+
+                    <!-- Mã Lớp -->
+                    <div>
+                        <RadzenLabel Component="Id"
+                                     Text="Mã Lớp"
+                                     class="block text-sm font-medium text-gray-700 mb-1" />
+                        <RadzenTextBox Name="Id"
+                                       @bind-Value=@item.Id
+                                       class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                        <RadzenRequiredValidator Component="Id"
+                                                 Text="Chưa nhập Mã lớp"
+                                                 class="text-red-600 text-xs mt-1" />
+                    </div>
+
+                    <!-- Tên Lớp -->
+                    <div>
+                        <RadzenLabel Component="Name"
+                                     Text="Tên Lớp"
+                                     class="block text-sm font-medium text-gray-700 mb-1" />
+                        <RadzenTextBox Name="Name"
+                                       @bind-Value=@item.Name
+                                       class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                        <RadzenRequiredValidator Component="Name"
+                                                 Text="Chưa nhập Tên lớp"
+                                                 class="text-red-600 text-xs mt-1" />
+                    </div>
+
+                    <!-- Trạng thái -->
+                    <div>
+                        <RadzenLabel Component="Trangthai"
+                                     Text="Trạng thái"
+                                     class="block text-sm font-medium text-gray-700 mb-1" />
+                        <RadzenNumeric Name="Trangthai"
+                                       @bind-Value=@item.Trangthai
+                                       class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                        <RadzenRequiredValidator Component="Trangthai"
+                                                 Text="Chưa nhập Trạng thái"
+                                                 class="text-red-600 text-xs mt-1" />
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <RadzenButton ButtonType="ButtonType.Submit"
+                                      Text="Lưu"
+                                      class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition" />
+                        <RadzenButton ButtonType="ButtonType.Button"
+                                      Click=@Cancel
+                                      Text="Hủy"
+                                      class="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition" />
+                    </div>
+                </RadzenTemplateForm>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    Lop item = new Lop();
+    List<Khoa> KhoaList = new List<Khoa>();
+    List<Khoahoc> KhoahocList = new List<Khoahoc>();
+    List<Nganh> NganhList = new List<Nganh>();
+    public string SelectedId { get; set; }
+    public string ErrMessage = "";
+    string countryId = "";
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/Khoa/KhoaGetList");
+            KhoaList = await response.Content.ReadFromJsonAsync<List<Khoa>>();
+
+            response = await Http.GetAsync("api/Khoahoc/KhoahocGetList");
+            KhoahocList = await response.Content.ReadFromJsonAsync<List<Khoahoc>>();
+            item.Trangthai = 1;
+            ErrMessage = "";
+        }
+        catch (Exception e)
+        {
+            ErrMessage = e.Message;
+        }
+    }
+    protected async Task OnSubmit()
+    {
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/Lop/LopAdd", @item);
+            await JsRuntime.InvokeVoidAsync("alert", "Saved Successfully!");
+            NavigationManager.NavigateTo("Loplist");
+            ErrMessage = "";
+        }
+        catch (Exception e)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "Error:" + e.Message);
+            ErrMessage = e.Message;
+        }
+    }
+    void Cancel()
+    {
+        NavigationManager.NavigateTo("Loplist");
+    }
+
+    private async Task OnChange(object value)
+    {
+        if (value != "")
+        {
+            var response = await Http.GetAsync("api/Nganh/NganhGetListByKhoa/" + item.KhoaID);
+            if (response.IsSuccessStatusCode)
+            {
+                NganhList = await response.Content.ReadFromJsonAsync<List<Nganh>>();
+            }
+            else
+            {
+                ErrMessage = "Lỗi trong khi lấy danh sách";
+            }
+        }
+        else
+        {
+            NganhList.Clear();
+        }
+    }
+}

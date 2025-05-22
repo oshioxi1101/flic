@@ -1,0 +1,169 @@
+﻿@page "/LopList"
+@using Flic.Shared
+@using System.Net.Http.Headers
+@inject HttpClient _httpClient
+@inject Blazored.LocalStorage.ILocalStorageService _localStorage
+@inject NavigationManager NavigationManager
+@inject NorthwindService service
+
+<!-- Import Tailwind CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+<div class="container mx-auto px-4 py-8">
+    <PageTitle>Danh sách Lớp</PageTitle>
+
+    <AuthorizeView>
+        <NotAuthorized>
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg max-w-lg mx-auto mt-8">
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p class="text-red-700">Bạn không có quyền truy cập trang này.</p>
+                </div>
+            </div>
+        </NotAuthorized>
+        <Authorized Context="Auth">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl font-bold text-gray-800">Danh sách Lớp</h1>
+                <div class="flex gap-3">
+                    <button @onclick='@(args => OnClick("/LopAdd"))'
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-300 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Thêm mới
+                    </button>
+                    
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(ErrMessage))
+            {
+                <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg mb-6">
+                    <p class="text-red-700">@ErrMessage</p>
+                </div>
+            }
+
+            <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                @if (list == null)
+                {
+                    <div class="text-center py-8">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                        <p class="mt-2 text-gray-600">Đang tải...</p>
+                    </div>
+                }
+                else if (list.Count == 0)
+                {
+                    <div class="text-center py-8 bg-gray-50 rounded-lg">
+                        <p class="text-gray-600">Không có lớp nào được tìm thấy.</p>
+                    </div>
+                }
+                else
+                {
+                    <RadzenDataGrid @ref="grid"
+                                    AllowColumnPicking="false"
+                                    AllowFiltering="true"
+                                    FilterMode="FilterMode.Advanced"
+                                    AllowPaging="true"
+                                    AllowSorting="true"
+                                    Data="@list"
+                                    TItem="Lop"
+                                    PageSize="40"
+                                    AllowColumnResize="true"
+                                    class="w-full">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="Lop" Property="Id" Title="ID" Width="140px" Filterable="false">
+                                <Template Context="data">
+                                    <span class="text-gray-900">@data.Id</span>
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="Lop" Property="KhoahocID" Title="Khóa học">
+                                <Template Context="data">
+                                    <span class="text-gray-900">@data.KhoahocID</span>
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="Lop" Property="KhoaID" Title="Khoa">
+                                <Template Context="data">
+                                    <span class="text-gray-900">@data.KhoaID</span>
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="Lop" Property="NganhID" Title="Ngành">
+                                <Template Context="data">
+                                    <span class="text-gray-900">@data.NganhID</span>
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="Lop" Property="Name" Title="Tên Lớp">
+                                <Template Context="data">
+                                    <span class="text-gray-900">@data.Name</span>
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="Lop" Property="Trangthai" Title="Trạng thái">
+                                <Template Context="data">
+                                    <span class="text-gray-900">@data.Trangthai</span>
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="Lop" Property="" Title="Thao tác" Filterable="false" Width="140px">
+                                <Template Context="data">
+                                    <div class="flex justify-end gap-3">
+                                        <a href="/LopEdit/@data.Id"
+                                           class="text-blue-600 hover:text-blue-800">Sửa</a>
+                                        <a href="/LopDelete/@data.Id"
+                                           class="text-red-600 hover:text-red-800"
+                                           onclick="return confirm('Bạn có chắc muốn xóa lớp này?')">Xóa</a>
+                                    </div>
+                                </Template>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+                }
+            </div>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    string ErrMessage = "";
+    List<Lop> list = new();
+    RadzenDataGrid<Lop> grid;
+
+    void OnClick(string link)
+    {
+        NavigationManager.NavigateTo(link, true);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("api/Lop/LopGetList");
+            response.EnsureSuccessStatusCode();
+            list = await response.Content.ReadFromJsonAsync<List<Lop>>() ?? new();
+            ErrMessage = "";
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            ErrMessage = e.Message; // Sửa lỗi: sử dụng biến instance ErrMessage
+        }
+    }
+
+    public void Export(string type)
+    {
+        try
+        {
+            Query q = new()
+                {
+                    OrderBy = grid.Query.OrderBy,
+                    Filter = grid.Query.Filter,
+                    Select = string.Join(",", grid.ColumnsCollection.Where(c => c.GetVisible()))
+                };
+            service.Export("Lops", type, q);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            ErrMessage = e.Message;
+        }
+    }
+}

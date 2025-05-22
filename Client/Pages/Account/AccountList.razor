@@ -1,0 +1,128 @@
+﻿@page "/AccountList"
+@using Flic.Shared
+@inject HttpClient _httpClient
+@inject Blazored.LocalStorage.ILocalStorageService _localStorage
+
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+<div class="min-h-screen bg-gray-100">
+    <PageTitle>Danh sách Tài khoản</PageTitle>
+    <AuthorizeView>
+        <NotAuthorized>
+            <div class="flex items-center justify-center h-screen">
+                <span class="text-xl font-semibold text-red-600">Bạn không có quyền truy cập.</span>
+            </div>
+        </NotAuthorized>
+        <Authorized>
+            <div class="container mx-auto px-4 py-8">
+                <!-- Header -->
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                    <h3 class="text-2xl font-bold text-gray-800">Danh sách Tài khoản</h3>
+                    <div class="flex flex-col sm:flex-row gap-2 items-center">
+                        <input class="border rounded-lg px-4 py-2 w-60 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                               type="text"
+                               placeholder="Tìm kiếm tên, email, SĐT..."
+                               value="@searchKeyword"
+                               @oninput="SearchChanged" />
+                        <a href="/AccountAdd" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-200">
+                            Thêm mới
+                        </a>
+                    </div>
+                </div>
+
+                <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên tài khoản</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Điện thoại</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                @if (list != null && list.Any())
+                                {
+                                    @foreach (var item in list)
+                                    {
+                                        <tr class="hover:bg-gray-50 transition">
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">@item.UserName</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">@item.Email</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">@item.PhoneNumber</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                                <a href="/AccountEdit/@item.Id" class="text-blue-600 hover:text-blue-800">Sửa</a>
+                                                <a href="/AccountResetPass/@item.Id" class="text-green-600 hover:text-green-800">Reset</a>
+                                                <a href="/AccountDelete/@item.Id" class="text-red-600 hover:text-red-800">Xóa</a>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">Không có dữ liệu.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    private List<Microsoft.AspNetCore.Identity.IdentityUser> list = new();
+    private string searchKeyword = "";
+
+    // Biến lưu timer debounce
+    private System.Timers.Timer debounceTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccounts();
+    }
+
+    // Hàm gọi khi gõ vào ô tìm kiếm
+    private void SearchChanged(ChangeEventArgs e)
+    {
+        searchKeyword = e.Value?.ToString() ?? "";
+
+        // Nếu đang có timer thì huỷ (reset lại)
+        debounceTimer?.Stop();
+        debounceTimer?.Dispose();
+
+        debounceTimer = new System.Timers.Timer(300); // 300ms
+        debounceTimer.Elapsed += async (s, args) =>
+        {
+            debounceTimer.Stop();
+            debounceTimer.Dispose();
+            await InvokeAsync(LoadAccounts); // Load lại tài khoản (trên UI thread)
+        };
+        debounceTimer.AutoReset = false;
+        debounceTimer.Start();
+    }
+
+    // Hàm tải danh sách theo keyword
+    private async Task LoadAccounts()
+    {
+        try
+        {
+            string url = string.IsNullOrWhiteSpace(searchKeyword)
+                ? "api/Accounts/GetList"
+                : $"api/Accounts/Search?keyword={Uri.EscapeDataString(searchKeyword)}";
+
+            var response = await _httpClient.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+            list = await response.Content.ReadFromJsonAsync<List<Microsoft.AspNetCore.Identity.IdentityUser>>();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            list = new();
+        }
+        StateHasChanged();
+    }
+}

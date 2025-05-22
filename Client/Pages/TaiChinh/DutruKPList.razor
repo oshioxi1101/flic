@@ -1,0 +1,530 @@
+﻿@page "/DutruKP"
+@using Flic.Shared.Models.TaiChinh
+@using System.Net.Http.Headers
+@inject HttpClient _httpClient
+@inject Blazored.LocalStorage.ILocalStorageService _localStorage
+@inject NavigationManager NavigationManager
+@inject NorthwindService service
+@inject IJSRuntime JsRuntime
+
+<!-- Import Tailwind CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+<!-- Header -->
+<header class="bg-blue-900 text-white py-6">
+    <div class="container mx-auto px-4">
+        <h1 class="text-3xl font-bold">Dự trù kinh phí - 2025</h1>
+        <p class="mt-2 text-lg">Trung tâm Ngoại ngữ - Tin học, Học viện Thanh thiếu niên Việt Nam</p>
+    </div>
+</header>
+
+<!-- Main Content -->
+<main class="container mx-auto px-4 py-12">
+    <!-- Instructions Section -->
+    <section class="mb-12 bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-2xl font-semibold text-blue-900 mb-4">Hướng dẫn lập dự trù kinh phí</h2>
+        <div class="space-y-6 text-gray-700">
+            <p class="text-lg">
+                Để lập dự trù kinh phí, vui lòng thực hiện theo các bước sau:
+            </p>
+
+            <!-- Add New Item -->
+            <div>
+                <h3 class="text-xl font-semibold text-blue-900 mb-2">Thêm mới nội dung dự trù</h3>
+                <ul class="list-decimal list-inside space-y-2">
+                    <li>Nhấn nút <span class="font-semibold text-green-600">"Thêm mới"</span>.</li>
+                    <li>Chọn <span class="font-semibold">Nhóm mục chi</span> từ danh sách.</li>
+                    <li>Chọn <span class="font-semibold">Mã mục chi</span>. Tên mục chi sẽ tự động điền. Nếu chưa có, nhập trực tiếp vào ô <span class="font-semibold">Tên mục chi</span>.</li>
+                    <li>Nhập <span class="font-semibold">Diễn giải</span>.</li>
+                    <li>Nhập <span class="font-semibold">Số tiền</span>.</li>
+                    <li>Nhấn biểu tượng <span class="text-green-600">✔</span> để lưu.</li>
+                </ul>
+            </div>
+
+            <!-- Edit Item -->
+            <div>
+                <h3 class="text-xl font-semibold text-blue-900 mb-2">Sửa nội dung dự trù</h3>
+                <p>
+                    Nhấn biểu tượng <span class="text-blue-600">✏️</span> ở cuối dòng, cập nhật thông tin, sau đó nhấn biểu tượng <span class="text-green-600">✔</span> để lưu.
+                </p>
+            </div>
+
+            <!-- Delete Item -->
+            <div>
+                <h3 class="text-xl font-semibold text-blue-900 mb-2">Xóa nội dung dự trù</h3>
+                <p>
+                    Nhấn biểu tượng <span class="text-red-600">🗑️</span> ở cuối dòng để xóa.
+                </p>
+            </div>
+
+            <!-- Note -->
+            <div class="bg-yellow-100 p-4 rounded-md">
+                <p class="font-semibold text-yellow-800">
+                    <span class="text-lg">Chú ý:</span><br />
+                    Hết hạn lập dự trù kinh phí, Phòng Kế hoạch - Tài vụ sẽ xuất dữ liệu tổng hợp và tham mưu kinh phí năm 2025 báo cáo Giám đốc Học viện!
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Form and Grid Section -->
+    <section class="bg-white p-6 rounded-lg shadow-md">
+        <!-- Unit Selection -->
+        <div class="mb-6">
+            <label class="block text-lg font-semibold text-blue-900 mb-2">Đơn vị</label>
+            <RadzenDropDown Data="@DonviList"
+            TextProperty="Name"
+            ValueProperty="Id"
+            @bind-Value="@maDonvi"
+            Placeholder="--Chọn Đơn vị--"
+            AllowClear="true"
+            Multiple="false"
+            TValue="string"
+            Change="@OnChangeDonvi"
+            class="w-full md:w-1/2 border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap gap-4 mb-6">
+            <RadzenButton ButtonStyle="ButtonStyle.Success"
+            Icon="add_circle"
+            Text="Thêm mới"
+            Click="@InsertRow"
+            Disabled="@(editMode == DataGridEditMode.Single && ordersToInsert.Count() > 0)"
+            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md" />
+
+            <RadzenButton Text="Export Dự trù"
+            Icon="grid_on"
+            Click="@(args => Export("excel"))"
+            ButtonStyle="ButtonStyle.Primary"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md" />
+
+            <AuthorizeView>
+                <Authorized>
+                    <RadzenButton Text="Tổng hợp theo đơn vị"
+                    Icon="grid_on"
+                    Click="@(args => ExportTongHop("excel"))"
+                    ButtonStyle="ButtonStyle.Primary"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md" />
+
+                    <RadzenButton Text="Tổng hợp theo mục chi"
+                    Icon="grid_on"
+                    Click="@(args => ExportTongHopTheoMucChi("excel"))"
+                    ButtonStyle="ButtonStyle.Primary"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md" />
+                </Authorized>
+            </AuthorizeView>
+        </div>
+
+        <!-- Data Grid -->
+        <RadzenDataGrid @ref="ordersGrid"
+        AllowAlternatingRows="true"
+        AllowPaging="true"
+        PageSize="30"
+        AllowSorting="true"
+        EditMode="@editMode"
+        Data="@list"
+        TItem="TAICHINH_DuTruKP"
+        RowUpdate="@OnUpdateRow"
+        RowCreate="@OnCreateRow"
+        Sort="@Reset"
+        Page="@Reset"
+        Filter="@Reset"
+        class="border border-gray-200 rounded-lg shadow-sm">
+            <Columns>
+                <RadzenDataGridColumn TItem="TAICHINH_DuTruKP" Property="Id" Title="ID" Width="80px" Filterable="false" Frozen="true"
+                class="bg-gray-100 font-semibold text-gray-700" />
+
+                <RadzenDataGridColumn TItem="TAICHINH_DuTruKP" Property="@nameof(TAICHINH_DuTruKP.MaNhom)" Title="Nhóm mục" Width="120px" Filterable="false">
+                    <EditTemplate Context="order">
+                        <RadzenDropDown @bind-Value="order.MaNhom"
+                        Data="@_NhomMucList"
+                        TextProperty="@nameof(TAICHINH_NhomMuc.TenNhom)"
+                        ValueProperty="@nameof(TAICHINH_NhomMuc.MaNhom)"
+                        Change="@ChangeNhomMuc"
+                        class="w-full border border-gray-300 rounded-md p-2" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="TAICHINH_DuTruKP" Property="@nameof(TAICHINH_DuTruKP.MaMucChi)" Title="Mã mục chi" Width="120px" Filterable="false">
+                    <EditTemplate Context="order">
+                        <RadzenDropDown @bind-Value="order.MaMucChi"
+                        Data="@MucChiList"
+                        TextProperty="@nameof(TAICHINH_MucChi.TenMuc)"
+                        ValueProperty="@nameof(TAICHINH_MucChi.Id)"
+                        Change="@ChangeMucChi"
+                        class="w-full border border-gray-300 rounded-md p-2" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="TAICHINH_DuTruKP" Property="@nameof(TAICHINH_DuTruKP.TenMucChi)" Title="Tên mục chi" Width="415px">
+                    <EditTemplate Context="order">
+                        <RadzenTextBox @bind-Value="order.TenMucChi"
+                        Name="TenMucChi"
+                        Style="width:100%;"
+                        class="w-full border border-gray-300 rounded-md p-2" />
+                        <RadzenRequiredValidator Text="Tên mục không được trống" Component="TenMucChi" Popup="true" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="TAICHINH_DuTruKP" Property="@nameof(TAICHINH_DuTruKP.DienGiai)" Title="Diễn giải" Width="415px">
+                    <EditTemplate Context="order">
+                        <RadzenTextBox @bind-Value="order.DienGiai"
+                        Name="DienGiai"
+                        Style="width:100%;"
+                        class="w-full border border-gray-300 rounded-md p-2" />
+                        <RadzenRequiredValidator Text="Diễn giải không được trống" Component="DienGiai" Popup="true" />
+                    </EditTemplate>
+                    <FooterTemplate>
+                        <b class="text-blue-900">Tổng:</b>
+                    </FooterTemplate>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="TAICHINH_DuTruKP" Property="@nameof(TAICHINH_DuTruKP.SoTien)" Title="Số tiền" Width="150px" FormatString="{0:N0}">
+                    <EditTemplate Context="order">
+                        <RadzenNumeric @bind-Value="order.SoTien"
+                        Name="SoTien"
+                        Style="width:100%;"
+                        TextAlign="TextAlign.Right"
+                        Format="#,##0"
+                        class="w-full border border-gray-300 rounded-md p-2" />
+                        <RadzenRequiredValidator Text="Số tiền không được trống" Component="SoTien" Popup="true" />
+                    </EditTemplate>
+                    <FooterTemplate>
+                        <b class="text-blue-900">
+                            @if (list != null)
+                            {
+                                <span>@String.Format("{0:#,##0}", list.Sum(o => o.SoTien))</span>
+                            }
+                        </b>
+                    </FooterTemplate>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="TAICHINH_DuTruKP" Context="order" Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true" Width="120px">
+                    <Template Context="order">
+                        <RadzenButton Icon="edit"
+                        ButtonStyle="ButtonStyle.Light"
+                        Variant="Variant.Flat"
+                        Size="ButtonSize.Medium"
+                        Click="@(args => EditRow(order))"
+                        @onclick:stopPropagation="true"
+                        class="text-blue-600 hover:text-blue-800" />
+                        <RadzenButton ButtonStyle="ButtonStyle.Danger"
+                        Icon="delete"
+                        Variant="Variant.Flat"
+                        Size="ButtonSize.Medium"
+                        Click="@(args => DeleteRow(order))"
+                        @onclick:stopPropagation="true"
+                        class="text-red-600 hover:text-red-800" />
+                    </Template>
+                    <EditTemplate Context="order">
+                        <RadzenButton Icon="check"
+                        ButtonStyle="ButtonStyle.Success"
+                        Variant="Variant.Flat"
+                        Size="ButtonSize.Medium"
+                        Click="@((args) => SaveRow(order))"
+                        class="text-green-600 hover:text-green-800" />
+                        <RadzenButton Icon="close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Variant="Variant.Flat"
+                        Size="ButtonSize.Medium"
+                        Click="@((args) => CancelEdit(order))"
+                        class="text-gray-600 hover:text-gray-800" />
+                        <RadzenButton ButtonStyle="ButtonStyle.Danger"
+                        Icon="delete"
+                        Variant="Variant.Flat"
+                        Size="ButtonSize.Medium"
+                        Click="@(args => DeleteRow(order))"
+                        class="text-red-600 hover:text-red-800" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </section>
+</main>
+
+
+
+@code {
+    // Existing C# logic remains unchanged
+    bool isLoading;
+    int count;
+    IEnumerable<string> selectedNhom;
+    string maDonvi;
+    string _maNhom;
+    List<TAICHINH_DuTruKP> list;
+    RadzenDataGrid<TAICHINH_DuTruKP> ordersGrid;
+
+    List<TAICHINH_NhomMuc> _NhomMucList;
+    List<TAICHINH_MucChi> MucChiList;
+    List<Khoa> DonviList;
+
+    DataGridEditMode editMode = DataGridEditMode.Single;
+
+    List<TAICHINH_DuTruKP> ordersToInsert = new List<TAICHINH_DuTruKP>();
+    List<TAICHINH_DuTruKP> ordersToUpdate = new List<TAICHINH_DuTruKP>();
+
+    void Reset()
+    {
+        ordersToInsert.Clear();
+        ordersToUpdate.Clear();
+    }
+
+    void Reset(TAICHINH_DuTruKP order)
+    {
+        ordersToInsert.Remove(order);
+        ordersToUpdate.Remove(order);
+    }
+
+    async Task EditRow(TAICHINH_DuTruKP order)
+    {
+        if (editMode == DataGridEditMode.Single && ordersToInsert.Count() > 0)
+        {
+            Reset();
+        }
+
+        ordersToUpdate.Add(order);
+        await ordersGrid.EditRow(order);
+    }
+
+    async void OnUpdateRow(TAICHINH_DuTruKP order)
+    {
+        Reset(order);
+
+        var response = await _httpClient.PutAsJsonAsync("api/DutruKP/DuTruKPUpdate", @order);
+        if (response.IsSuccessStatusCode)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "Cập nhật thành công!");
+            InvokeAsync(StateHasChanged);
+        }
+        else
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "Cập nhật không thành công!");
+        }
+    }
+
+    async Task SaveRow(TAICHINH_DuTruKP order)
+    {
+        await ordersGrid.UpdateRow(order);
+    }
+
+    async void CancelEdit(TAICHINH_DuTruKP order)
+    {
+        Reset(order);
+        ordersGrid.CancelEditRow(order);
+        TAICHINH_DuTruKP item = new TAICHINH_DuTruKP();
+        try
+        {
+            if (order.Id > 0)
+            {
+                item = await _httpClient.GetFromJsonAsync<TAICHINH_DuTruKP>("api/DutruKP/DutruKPGetByID/" + order.Id);
+                var result = from r in list where r.Id == order.Id select r;
+                result.First().MaNhom = item.MaNhom;
+                result.First().MaMucChi = item.MaMucChi;
+                result.First().SoTien = item.SoTien;
+                result.First().DienGiai = item.DienGiai;
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    async Task DeleteRow(TAICHINH_DuTruKP order)
+    {
+        Reset(order);
+
+        if (list.Contains(order))
+        {
+            try
+            {
+                var response = await _httpClient.DeleteAsync("api/DutruKP/DutruKPDelete/" + order.Id);
+                list.Remove(order);
+                InvokeAsync(StateHasChanged);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+
+            await ordersGrid.Reload();
+        }
+        else
+        {
+            ordersGrid.CancelEditRow(order);
+            await ordersGrid.Reload();
+        }
+    }
+
+    async Task InsertRow()
+    {
+        if (maDonvi == null)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "Chọn đơn vị trước!");
+        }
+        else
+        {
+            if (editMode == DataGridEditMode.Single)
+            {
+                Reset();
+            }
+
+            var order = new TAICHINH_DuTruKP();
+            ordersToInsert.Add(order);
+            await ordersGrid.InsertRow(order);
+        }
+    }
+
+    async void OnCreateRow(TAICHINH_DuTruKP order)
+    {
+        try
+        {
+            order.MaDonVi = maDonvi;
+            var response = _httpClient.PostAsJsonAsync("api/DutruKP/DutruKPAdd", @order);
+            if (response.Result.IsSuccessStatusCode)
+            {
+                InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                JsRuntime.InvokeVoidAsync("alert", "Error: Thêm mới không thành công");
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception e)
+        {
+            //JsRuntime.InvokeVoidAsync("alert", "Error:" + e.Message);
+        }
+
+        ordersToInsert.Remove(order);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("api/MucChi/MucChiGetList");
+            if (response.IsSuccessStatusCode)
+            {
+                MucChiList = await response.Content.ReadFromJsonAsync<List<TAICHINH_MucChi>>();
+            }
+            response = await _httpClient.GetAsync("api/NhomMuc/NhomMucGetList");
+            if (response.IsSuccessStatusCode)
+            {
+                _NhomMucList = await response.Content.ReadFromJsonAsync<List<TAICHINH_NhomMuc>>();
+            }
+
+            response = await _httpClient.GetAsync("api/Khoa/KhoaGetList");
+            if (response.IsSuccessStatusCode)
+            {
+                DonviList = await response.Content.ReadFromJsonAsync<List<Khoa>>();
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            string ErrMessage = e.Message;
+        }
+    }
+
+    public void Export(string type)
+    {
+        var url = "export/Taichinh_DutruKP/excel/" + maDonvi;
+        NavigationManager.NavigateTo(url, true);
+    }
+
+    public void ExportTongHop(string type)
+    {
+        var url = "export/Taichinh_TongHopDutruKP/excel/";
+        NavigationManager.NavigateTo(url, true);
+    }
+
+    public void ExportTongHopTheoMucChi(string type)
+    {
+        var url = "export/Taichinh_TongHopTheoMucChi/excel/";
+        NavigationManager.NavigateTo(url, true);
+    }
+
+    private async void OnChangeDonvi(object args)
+    {
+        if (maDonvi != null)
+        {
+            var response = await _httpClient.GetAsync("api/DutruKP/DuTruKPGetListByDonvi/" + maDonvi);
+            if (response.IsSuccessStatusCode)
+            {
+                list = await response.Content.ReadFromJsonAsync<List<TAICHINH_DuTruKP>>();
+                InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async void ChangeNhomMuc(object args)
+    {
+        if (ordersToInsert.Count == 1)
+        {
+            TAICHINH_DuTruKP obj = ordersToInsert.ElementAt(0);
+            if (obj != null)
+            {
+                var response = await _httpClient.GetAsync("api/MucChi/MucChiGetListByNhom/" + obj.MaNhom);
+                if (response.IsSuccessStatusCode)
+                {
+                    MucChiList = await response.Content.ReadFromJsonAsync<List<TAICHINH_MucChi>>();
+                    InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+        else if (ordersToUpdate.Count == 1)
+        {
+            TAICHINH_DuTruKP obj = ordersToUpdate.ElementAt(0);
+            if (obj != null)
+            {
+                var response = await _httpClient.GetAsync("api/MucChi/MucChiGetListByNhom/" + obj.MaNhom);
+                if (response.IsSuccessStatusCode)
+                {
+                    MucChiList = await response.Content.ReadFromJsonAsync<List<TAICHINH_MucChi>>();
+                    InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+    }
+
+    private async void ChangeMucChi(object selectedValue)
+    {
+        if (selectedValue != null)
+        {
+            string selectedStringValue = selectedValue.ToString();
+            Console.WriteLine("Selected Value: " + selectedStringValue);
+        }
+
+        if (ordersToInsert.Count == 1)
+        {
+            TAICHINH_DuTruKP obj = ordersToInsert.ElementAt(0);
+            if (obj != null)
+            {
+                var response = await _httpClient.GetAsync("api/MucChi/MucChiGetByID/" + obj.MaMucChi);
+                if (response.IsSuccessStatusCode)
+                {
+                    TAICHINH_MucChi o = await response.Content.ReadFromJsonAsync<TAICHINH_MucChi>();
+                    obj.TenMucChi = o.TenMuc;
+                    InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+        else if (ordersToUpdate.Count == 1)
+        {
+            TAICHINH_DuTruKP obj = ordersToUpdate.ElementAt(0);
+            if (obj != null)
+            {
+                var response = await _httpClient.GetAsync("api/MucChi/MucChiGetByID/" + obj.MaMucChi);
+                if (response.IsSuccessStatusCode)
+                {
+                    TAICHINH_MucChi o = await response.Content.ReadFromJsonAsync<TAICHINH_MucChi>();
+                    obj.TenMucChi = o.TenMuc;
+                    InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,183 @@
+﻿@page "/login"
+@layout NoHeaderLayout
+@using Flic.Client.Services
+@using Flic.Shared.Models
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-cyan-50 px-4">
+    <div class="w-full max-w-md bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 sm:p-10 transition-all duration-500">
+        <div class="text-center mb-8">
+            <img src="/logo.png" alt="FLIC Logo" class="h-16 mx-auto mb-2 drop-shadow-lg">
+            <h2 class="text-3xl font-black text-gray-900 tracking-tight">Đăng nhập FLIC-VYA</h2>
+            <p class="mt-2 text-gray-500">Truy cập tài khoản để tiếp tục học tập</p>
+        </div>
+
+        @if (ShowErrors)
+        {
+            <div class="mb-5 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow animate-pulse">
+                <div class="flex items-start">
+                    <svg class="h-5 w-5 text-red-500 mt-1 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div>
+                        <span class="font-semibold text-red-800">Không thể đăng nhập</span>
+                        <div class="mt-1 text-red-700 text-sm">
+                            @Error
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <EditForm Model="loginModel" OnValidSubmit="HandleLogin" class="space-y-6">
+            <DataAnnotationsValidator />
+            <div class="space-y-4">
+                <div>
+                    <label for="username" class="block text-sm font-semibold text-gray-700 mb-1">Tên đăng nhập</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                            </svg>
+                        </span>
+                        <InputText id="username" class="pl-10 pr-3 py-2 w-full border-2 border-gray-200 focus:border-indigo-400 rounded-xl bg-white shadow-sm focus:outline-none transition-all"
+                                   @bind-Value="loginModel.Username" placeholder="Nhập tên đăng nhập" />
+                    </div>
+                    <ValidationMessage For="@(() => loginModel.Username)" class="mt-1 text-xs text-red-600" />
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-semibold text-gray-700 mb-1">Mật khẩu</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                            </svg>
+                        </span>
+                        <InputText id="password" type="password"
+                                   class="pl-10 pr-3 py-2 w-full border-2 border-gray-200 focus:border-indigo-400 rounded-xl bg-white shadow-sm focus:outline-none transition-all"
+                                   @bind-Value="loginModel.Password" placeholder="Nhập mật khẩu" />
+                    </div>
+                    <ValidationMessage For="@(() => loginModel.Password)" class="mt-1 text-xs text-red-600" />
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <label class="flex items-center text-sm text-gray-700">
+                    <input type="checkbox" class="h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 mr-2">
+                    Ghi nhớ đăng nhập
+                </label>
+                <a href="/forgot-password" class="text-sm text-indigo-600 hover:underline font-semibold">Quên mật khẩu?</a>
+            </div>
+
+            <button type="submit" class="w-full flex items-center justify-center py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base shadow-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-400 relative"
+                    disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <svg class="animate-spin h-5 w-5 mr-2 text-indigo-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Đang xử lý...</span>
+                }
+                else
+                {
+                    <span>Đăng nhập</span>
+                }
+            </button>
+        </EditForm>
+
+        <div class="flex items-center my-6">
+            <div class="flex-grow border-t border-gray-300"></div>
+            <span class="mx-3 text-gray-400 text-xs font-bold">Hoặc</span>
+            <div class="flex-grow border-t border-gray-300"></div>
+        </div>
+
+        <button @onclick="GoogleLogin" type="button"
+                class="w-full flex items-center justify-center py-2.5 rounded-xl border border-gray-200 shadow-sm bg-white font-semibold text-gray-700 hover:bg-gray-50 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-300 text-base">
+            <svg class="h-5 w-5 mr-2" viewBox="0 0 21 20" fill="none">
+                <path d="M20.3081 10.2303C20.3081 9.55056 20.253 8.86711 20.1354 8.19836H10.7031V12.0492H16.1046C15.8804 13.2911 15.1602 14.3898 14.1057 15.0879V17.5866H17.3282C19.2205 15.8449 20.3081 13.2728 20.3081 10.2303Z" fill="#3F83F8" />
+                <path d="M10.7019 20.0006C13.3989 20.0006 15.6734 19.1151 17.3306 17.5865L14.1081 15.0879C13.2115 15.6979 12.0541 16.0433 10.7056 16.0433C8.09669 16.0433 5.88468 14.2832 5.091 11.9169H1.76562V14.4927C3.46322 17.8695 6.92087 20.0006 10.7019 20.0006V20.0006Z" fill="#34A853" />
+                <path d="M5.08857 11.9169C4.66969 10.6749 4.66969 9.33008 5.08857 8.08811V5.51233H1.76688C0.348541 8.33798 0.348541 11.667 1.76688 14.4927L5.08857 11.9169V11.9169Z" fill="#FBBC04" />
+                <path d="M10.7019 3.95805C12.1276 3.936 13.5055 4.47247 14.538 5.45722L17.393 2.60218C15.5852 0.904587 13.1858 -0.0287217 10.7019 0.000673888C6.92087 0.000673888 3.46322 2.13185 1.76562 5.51234L5.08732 8.08813C5.87733 5.71811 8.09302 3.95805 10.7019 3.95805V3.95805Z" fill="#EA4335" />
+            </svg>
+            Đăng nhập với Google
+        </button>
+
+        <div class="text-center mt-8">
+            <span class="text-sm text-gray-500">
+                Chưa có tài khoản?
+                <a href="/register" class="ml-1 text-indigo-600 hover:underline font-bold">Đăng ký ngay</a>
+            </span>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string returnUrl { get; set; }
+    private LoginModel loginModel = new LoginModel();
+    private bool ShowErrors = false;
+    private string Error = "";
+    private bool isLoading = false;
+    [Parameter]
+    public string error { get; set; }
+
+    private async Task HandleLogin()
+    {
+        ShowErrors = false;
+        isLoading = true;
+        try
+        {
+            var result = await AuthService.Login(loginModel);
+            if (result?.Successful == true)
+            {
+                // Sau khi đăng nhập thành công, kiểm tra thông tin sinh viên
+                var username = loginModel.Username;
+                var student = await AuthService.GetStudentByUserName(username);
+                if (student == null)
+                {
+                    // Nếu chưa có thông tin, chuyển sang hoàn thiện thông tin sinh viên
+                    NavigationManager.NavigateTo($"/StudentAdd1/{username}", true);
+                    return;
+                }
+                NavigationManager.NavigateTo(string.IsNullOrEmpty(returnUrl) ? "/flic" : returnUrl);
+            }
+            else
+            {
+                Error = result?.Error ?? "Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin.";
+                ShowErrors = true;
+                await JSRuntime.InvokeVoidAsync("scrollTo", 0, 0);
+            }
+        }
+        catch (Exception ex)
+        {
+            Error = "Lỗi khi đăng nhập: " + ex.Message;
+            ShowErrors = true;
+            await JSRuntime.InvokeVoidAsync("scrollTo", 0, 0);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void GoogleLogin()
+    {
+        NavigationManager.NavigateTo("https://localhost:5021/api/GoogleAuth/signin", forceLoad: true);
+    }
+
+    protected override void OnInitialized()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+        if (query.TryGetValue("error", out var errorMsg))
+        {
+            Error = errorMsg;
+            ShowErrors = true;
+        }
+    }
+}

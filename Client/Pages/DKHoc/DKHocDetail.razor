@@ -1,0 +1,158 @@
+﻿@page "/DKHocDetail/{Id:int}"
+@using Flic.Shared
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+
+<style>
+    .QR_Image {
+        width: 200px;
+        height: 200px;
+    }
+
+        .QR_Image img {
+            width: 198px;
+            height: 198px;
+        }
+</style>
+
+<div class="container mx-auto p-4">
+    <h2 class="text-2xl font-bold mb-4">Chi tiết đăng ký</h2>
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        @if (item != null)
+        {
+            <p><strong>Mã sinh viên:</strong> @item.MaSinhvien</p>
+            <p><strong>Họ tên:</strong> @item.HovaDem @item.Ten</p>
+            <p><strong>Khóa:</strong> @item.KhoahocID  <strong>Lớp:</strong> @item.LopID</p>
+            <p><strong>Email:</strong> @item.Email</p>
+            <p><strong>Địa chỉ:</strong> @item.DiaChi</p>
+            <p><strong>Mã đăng ký:</strong> @item.Id</p>
+            <p><strong>Mã khóa học:</strong> @item.CourseId - @TenLop</p>
+            <p><strong>Học phí:</strong> @item.Hocphi</p>
+            <p><strong>Trạng thái thanh toán:</strong> @(item.PaymentSuccess == true ? "Thành công" : "Chưa thanh toán")</p>
+            @if (item.NgayThanhtoan.HasValue && item.PaymentSuccess != true)
+            {
+                <p><strong>Thời gian thanh toán còn lại:</strong> @GetRemainingTime()</p>
+            }
+        }
+        @if (item.PaymentSuccess == null || !item.PaymentSuccess.Value)
+        {
+            @if (QRActive.GetValueOrDefault())
+            {
+                <div class="QR_Image my-4">
+                    <img class="QR_Image" src="@imageBytes" />
+                </div>
+            }
+            @if (VNPayActive.GetValueOrDefault())
+            {
+                <RadzenButton Text="Thanh toán lại" Icon="grid_on" Click="@(args => Thanhtoan(item.Id))" ButtonStyle="ButtonStyle.Primary" />
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    DKHoc item = new DKHoc();
+    public bool? QRActive { get; set; }
+    public bool? VNPayActive { get; set; }
+    public string TenLop { get; set; }
+    string imageBytes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Lấy thông tin đăng ký
+            var response = await Http.GetAsync($"api/DKHoc/DKHocGetByID/{Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                item = await response.Content.ReadFromJsonAsync<DKHoc>();
+
+                // Lấy thông tin lớp học
+                response = await Http.GetAsync($"api/Lophoc/LophocGetByID/{item.CourseId}");
+                if (response.IsSuccessStatusCode)
+                {
+                    var lh = await response.Content.ReadFromJsonAsync<Lophoc>();
+                    TenLop = lh.TenLop;
+                    QRActive = lh.QRActive;
+                    VNPayActive = lh.VNPAYActive;
+                }
+
+                // Lấy mã QR nếu có
+                var rs = await Http.GetAsync($"api/DKHoc/DKHocGetQRByID/{Id}");
+                if (rs.IsSuccessStatusCode)
+                {
+                    imageBytes = await rs.Content.ReadAsStringAsync();
+                }
+
+                StateHasChanged();
+            }
+            else
+            {
+                await JsRuntime.InvokeVoidAsync("alert", $"Error: {response.StatusCode} {await response.Content.ReadAsStringAsync()}");
+            }
+        }
+        catch (Exception e)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", $"Error: {e.Message}");
+        }
+    }
+
+    public async Task Thanhtoan(int id)
+    {
+        try
+        {
+            // Đặt lại thời gian thanh toán
+            var resetResponse = await Http.PostAsJsonAsync($"api/DKHoc/DKHocResetPaymentTime/{id}", new { NgayThanhtoan = DateTime.UtcNow });
+            if (!resetResponse.IsSuccessStatusCode)
+            {
+                await JsRuntime.InvokeVoidAsync("alert", $"Lỗi khi đặt lại thời gian thanh toán: {resetResponse.StatusCode}");
+                return;
+            }
+
+            // Cập nhật NgayThanhtoan trong item
+            item.NgayThanhtoan = DateTime.UtcNow;
+
+            // Tạo thông tin thanh toán VNPay
+            PaymentInformationModel pay = new PaymentInformationModel
+                {
+                    Amount = (double)item.Hocphi,
+                    Name = $"{item.Id} {item.MaSinhvien} {item.HovaDem} {item.Ten}",
+                    OrderType = item.CourseId.ToString(),
+                    OrderDescription = $"{item.DienThoai} {item.DiaChi}",
+                    OrderId = $"DKH-{item.Id}"
+                };
+
+            var response = await Http.PostAsJsonAsync("api/VNPayQR/CreatePaymentUrl", pay);
+            if (response.IsSuccessStatusCode)
+            {
+                var url = await response.Content.ReadAsStringAsync();
+                NavigationManager.NavigateTo(url);
+            }
+            else
+            {
+                await JsRuntime.InvokeVoidAsync("alert", $"Error: {response.StatusCode} {await response.Content.ReadAsStringAsync()}");
+            }
+        }
+        catch (Exception e)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", $"Error: {e.Message}");
+        }
+    }
+
+    private string GetRemainingTime()
+    {
+        if (!item.NgayThanhtoan.HasValue)
+            return "Chưa bắt đầu thanh toán";
+
+        var timeElapsed = DateTime.UtcNow - item.NgayThanhtoan.Value;
+        var timeRemaining = TimeSpan.FromMinutes(30) - timeElapsed;
+
+        if (timeRemaining.TotalSeconds <= 0)
+            return "Hết thời gian thanh toán";
+
+        return $"{(int)timeRemaining.TotalMinutes} phút {(int)timeRemaining.Seconds} giây";
+    }
+}

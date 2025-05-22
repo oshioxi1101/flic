@@ -1,0 +1,300 @@
+﻿<!-- Import Tailwind CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+@page "/StudentImport/"
+@inject HttpClient Http
+@using System.IO
+@using Flic.Shared
+
+<div class="min-h-screen bg-gray-100 py-6 px-4">
+    <div class="container mx-auto max-w-4xl">
+        <h3 class="text-2xl font-bold text-gray-800 mb-4 text-center">Nhập khẩu danh sách sinh viên</h3>
+        <p class="text-gray-600 mb-6 text-center">
+            Tệp danh sách có các cột theo thứ tự: STT, Mã sinh viên, Họ đệm, Tên, Ngày sinh, Giới tính, CCCD
+        </p>
+        @if (!string.IsNullOrEmpty(Message))
+        {
+            <div class="mb-6 p-4 bg-blue-100 text-blue-700 rounded-md text-sm text-center">
+                @Message
+            </div>
+        }
+
+        <div class="bg-white shadow-lg rounded-lg p-6 mb-6">
+            <EditForm Model="@item" OnValidSubmit="@OnSubmit" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Khóa học -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Khóa học</label>
+                        <InputSelect @bind-Value="@item.KhoahocID"
+                                     class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">---Chọn khóa học---</option>
+                            @if (KhoahocList != null)
+                            {
+                                @foreach (var it in KhoahocList)
+                                {
+                                    <option value="@it.Id">@it.Name</option>
+                                }
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <!-- Khoa -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Khoa</label>
+                        <InputSelect ValueChanged="@((string value) => KhoaHasChanged(value))"
+                                     ValueExpression="@(() => item.KhoaID)"
+                                     Value="@item.KhoaID"
+                                     class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">---Chọn khoa---</option>
+                            @if (KhoaList != null)
+                            {
+                                @foreach (var it in KhoaList)
+                                {
+                                    <option value="@it.Id">@it.Name</option>
+                                }
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <!-- Ngành -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Ngành</label>
+                        <InputSelect ValueChanged="@((string value) => NganhHasChanged(value))"
+                                     ValueExpression="@(() => item.NganhID)"
+                                     Value="@item.NganhID"
+                                     class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">---Chọn ngành---</option>
+                            @if (NganhList != null)
+                            {
+                                @foreach (var it in NganhList)
+                                {
+                                    <option value="@it.Id">@it.Name</option>
+                                }
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <!-- Lớp -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Lớp</label>
+                        <InputSelect @bind-Value="@item.LopID"
+                                     class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">---Chọn lớp---</option>
+                            @if (LopList != null)
+                            {
+                                @foreach (var it in LopList)
+                                {
+                                    <option value="@it.Id">@it.Name</option>
+                                }
+                            }
+                        </InputSelect>
+                    </div>
+                </div>
+
+                <!-- File Upload and Submit -->
+                <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Chọn tệp</label>
+                        <InputFile OnChange="OnInputFileChange"
+                                   multiple
+                                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-indigo-600 file:text-white file:hover:bg-indigo-700" />
+                    </div>
+                    <button type="submit"
+                            class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition mt-4 sm:mt-0">
+                        Thực hiện
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+
+        @if (result != null)
+        {
+            <!-- Imported Successfully -->
+            @if (result.ImportedList != null && result.ImportedList.Any())
+            {
+                <div class="bg-white shadow-lg rounded-lg p-6 mb-6">
+                    <h4 class="text-lg font-semibold text-green-600 mb-4">Danh sách sinh viên nhập thành công</h4>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Mã SV</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Họ đệm</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tên</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ngày sinh</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                @foreach (var it in result.ImportedList)
+                                {
+                                    <tr>
+                                        <td class="px-4 py-2 text-sm text-gray-900">@it.MaSV</td>
+                                        <td class="px-4 py-2 text-sm text-gray-900">@it.HoDem</td>
+                                        <td class="px-4 py-2 text-sm text-gray-900">@it.Ten</td>
+                                        <td class="px-4 py-2 text-sm text-gray-900">@it.Ngaysinh</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+
+            <!-- Already Exists -->
+            @if (result.ExistList != null && result.ExistList.Any())
+            {
+                <div class="bg-white shadow-lg rounded-lg p-6 mb-6">
+                    <h4 class="text-lg font-semibold text-yellow-600 mb-4">Danh sách sinh viên đã tồn tại</h4>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Mã SV</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Họ đệm</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tên</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ngày sinh</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                @foreach (var it in result.ExistList)
+                                {
+                                    <tr>
+                                        <td class="px-4 py-2 text-sm text-gray-900">@it.MaSV</td>
+                                        <td class="px-4 py-2 text-sm text-gray-900">@it.HoDem</td>
+                                        <td class="px-4 py-2 text-sm text-gray-900">@it.Ten</td>
+                                        <td class="px-4 py-2 text-sm text-gray-900">@it.Ngaysinh</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+
+            <!-- Errors -->
+            @if (result.ErrorList != null && result.ErrorList.Any())
+            {
+                <div class="bg-white shadow-lg rounded-lg p-6">
+                    <h4 class="text-lg font-semibold text-red-600 mb-4">Danh sách nhập lỗi</h4>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Mã SV</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Họ đệm</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tên</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ngày sinh</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                @foreach (var it in result.ErrorList)
+                                {
+                                    <tr>
+                                        <td class="px-4 py-2 text-sm text-gray-900">@it.MaSV</td>
+                                        <td class="px-4 py-2 text-sm text-gray-900">@it.HoDem</td>
+                                        <td class="px-4 py-2 text-sm text-gray-900">@it.Ten</td>
+                                        <td class="px-4 py-2 text-sm text-gray-900">@it.Ngaysinh</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private StudentImportView item = new StudentImportView();
+    string Message = "Chưa chọn tệp danh sách nào";
+    IReadOnlyList<IBrowserFile> selectedFiles;
+    private List<Khoahoc> KhoahocList;
+    private List<Khoa> KhoaList;
+    private List<Nganh> NganhList;
+    private List<Lop> LopList;
+    private string KhoahocID;
+    private string KhoaID;
+    private string NganhID;
+    private string LopID;
+    private StudentImportResult result = new StudentImportResult();
+    private void OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        selectedFiles = e.GetMultipleFiles();
+        Message = $"{selectedFiles.Count} file(s) selected";
+        this.StateHasChanged();
+    }
+
+    private async void OnSubmit()
+    {
+        foreach (var file in selectedFiles)
+        {
+            Stream stream = file.OpenReadStream();
+            MemoryStream ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            stream.Close();
+
+            item.FileName = file.Name;
+            item.FileContent = ms.ToArray();
+            ms.Close();
+
+            var rs = await Http.PostAsJsonAsync<StudentImportView>("/api/student/StudentUploadFile", item);
+            result = await rs.Content.ReadFromJsonAsync<StudentImportResult>();
+        }
+        Message = $"{selectedFiles.Count} file(s) uploaded on server";
+        this.StateHasChanged();
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            KhoahocList = await Http.GetFromJsonAsync<List<Khoahoc>>("api/Khoahoc/KhoahocGetList");
+            KhoaList = await Http.GetFromJsonAsync<List<Khoa>>("api/Khoa/KhoaGetList");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Error" + e.Message.ToString());
+        }
+    }
+    private async Task KhoaHasChanged(string value)
+    {
+        item.KhoaID = value;
+        if (value == "")
+        {
+            NganhList.Clear();
+        }
+        else
+        {
+            var response = await Http.GetAsync("api/Nganh/NganhGetListByKhoa/" + value);
+            NganhList = await response.Content.ReadFromJsonAsync<List<Nganh>>();
+        }
+    }
+    private async Task NganhHasChanged(string value)
+    {
+        item.NganhID = value;
+        if (value == "")
+        {
+            LopList.Clear();
+        }
+        else
+        {
+            var response = await Http.GetAsync("api/Lop/LopGetListByKhoahocNganh/" + item.KhoahocID + "/" + value);
+            LopList = await response.Content.ReadFromJsonAsync<List<Lop>>();
+            this.StateHasChanged();
+        }
+    }
+    protected async void KhoaChange(ChangeEventArgs _khoaId)
+    {
+        KhoaID = _khoaId.Value.ToString();
+        var response = await Http.GetAsync("api/Nganh/NganhGetListByKhoa/" + _khoaId.Value.ToString());
+        NganhList = await response.Content.ReadFromJsonAsync<List<Nganh>>();
+        this.StateHasChanged();
+    }
+
+    protected async void NganhChange(ChangeEventArgs nganhId)
+    {
+        var response = await Http.GetAsync("api/Lop/LopGetListByKhoahocNganh/" + KhoahocID + "/" + nganhId.Value);
+        LopList = await response.Content.ReadFromJsonAsync<List<Lop>>();
+        this.StateHasChanged();
+    }
+}

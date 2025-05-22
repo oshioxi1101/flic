@@ -1,0 +1,94 @@
+﻿@page "/AddKhoa/"
+@using Flic.Shared
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+
+<div class="min-h-screen bg-gray-100 flex items-center justify-center py-8">
+    <AuthorizeView>
+        <NotAuthorized>
+            <span class="text-xl font-semibold text-red-600">You're not authorized</span>
+        </NotAuthorized>
+        <Authorized Context="Auth">
+            <div class="w-full max-w-lg bg-white shadow-lg rounded-lg p-8">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">Thêm Khoa</h3>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="mb-4 text-red-600 font-semibold">@errorMessage</div>
+                }
+
+                <RadzenTemplateForm TItem="Khoa" Data=@item Submit=@OnSubmit class="space-y-6">
+                    <!-- Id Field -->
+                    <div>
+                        <RadzenLabel Component="Id"
+                                     Text="Mã Khoa"
+                                     class="block text-sm font-medium text-gray-700 mb-1" />
+                        <RadzenTextBox Name="Id"
+                                       @bind-Value=@item.Id
+                                       class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                        <RadzenRequiredValidator Component="Id"
+                                                 Text="Nhập mã khoa"
+                                                 class="text-red-600 text-sm mt-1" />
+                    </div>
+
+                    <!-- Name Field -->
+                    <div>
+                        <RadzenLabel Component="Name"
+                                     Text="Tên Khoa"
+                                     class="block text-sm font-medium text-gray-700 mb-1" />
+                        <RadzenTextBox Name="Name"
+                                       @bind-Value=@item.Name
+                                       class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                        <RadzenRequiredValidator Component="Name"
+                                                 Text="Nhập Tên"
+                                                 class="text-red-600 text-sm mt-1" />
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="flex justify-end space-x-3">
+                        <RadzenButton ButtonType="ButtonType.Submit"
+                                      Text="Lưu"
+                                      class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition" />
+                        <RadzenButton ButtonType="ButtonType.Button"
+                                      Click=@Cancel
+                                      Text="Hủy"
+                                      class="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition" />
+                    </div>
+                </RadzenTemplateForm>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    Khoa item = new Khoa();
+    string errorMessage;
+
+    protected async Task OnSubmit()
+    {
+        errorMessage = null;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/Khoa/KhoaAdd", item);
+            if (response.IsSuccessStatusCode)
+            {
+                await JsRuntime.InvokeVoidAsync("alert", "Saved Successfully!");
+                NavigationManager.NavigateTo("KhoaList");
+            }
+            else
+            {
+                var content = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+                errorMessage = content != null && content.ContainsKey("message") ? content["message"] : "Không thành công, lỗi: " + response.StatusCode;
+            }
+        }
+        catch (Exception e)
+        {
+            errorMessage = "Error: " + e.Message;
+        }
+    }
+    void Cancel()
+    {
+        NavigationManager.NavigateTo("KhoaList");
+    }
+}

@@ -1,0 +1,103 @@
+﻿<!-- Import Tailwind CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+@page "/NganhAdd/"
+@using Flic.Shared
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+
+<div class="min-h-screen bg-gray-100 flex items-center justify-center py-8">
+    <AuthorizeView>
+        <NotAuthorized>
+            <span class="text-xl font-semibold text-red-600">You're not authorized</span>
+        </NotAuthorized>
+        <Authorized Context="Auth">
+            <div class="w-full max-w-lg bg-white shadow-lg rounded-lg p-8">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">Thêm Ngành</h3>
+
+                <RadzenTemplateForm TItem="Nganh" Data=@item Submit=@OnSubmit class="space-y-6">
+                    <!-- Khoa Field -->
+                    <div>
+                        <RadzenLabel Component="Id"
+                                     Text="Chọn Khoa"
+                                     class="block text-sm font-medium text-gray-700 mb-1" />
+                        <RadzenDropDown TValue="string"
+                                        Data=@KhoaList
+                                        TextProperty="Name"
+                                        ValueProperty="Id"
+                                        @bind-Value=@item.KhoaId
+                                        class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                        <RadzenRequiredValidator Component="Id"
+                                                 Text="Chưa Chọn Khoa"
+                                                 class="text-red-600 text-sm mt-1" />
+                    </div>
+
+                    <!-- Ma Nganh Field -->
+                    <div>
+                        <RadzenLabel Component="Id"
+                                     Text="Mã Ngành"
+                                     class="block text-sm font-medium text-gray-700 mb-1" />
+                        <RadzenTextBox Name="Id"
+                                       @bind-Value=@item.Id
+                                       class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                        <RadzenRequiredValidator Component="Id"
+                                                 Text="Chưa nhập mã ngành"
+                                                 class="text-red-600 text-sm mt-1" />
+                    </div>
+
+                    <!-- Ten Nganh Field -->
+                    <div>
+                        <RadzenLabel Component="Name"
+                                     Text="Tên Ngành"
+                                     class="block text-sm font-medium text-gray-700 mb-1" />
+                        <RadzenTextBox Name="Name"
+                                       @bind-Value=@item.Name
+                                       class="w-full border border-gray-300 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                        <RadzenRequiredValidator Component="Name"
+                                                 Text="Chưa nhập Tên ngành"
+                                                 class="text-red-600 text-sm mt-1" />
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="flex justify-end space-x-3">
+                        <RadzenButton ButtonType="ButtonType.Submit"
+                                      Text="Lưu"
+                                      class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition" />
+                        <RadzenButton ButtonType="ButtonType.Button"
+                                      Click=@Cancel
+                                      Text="Hủy"
+                                      class="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition" />
+                    </div>
+                </RadzenTemplateForm>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    Nganh item = new Nganh();
+    List<Khoa> KhoaList = new List<Khoa>();
+    protected override async Task OnInitializedAsync()
+    {
+        var response = await Http.GetAsync("api/Khoa/KhoaGetList");
+        KhoaList = await response.Content.ReadFromJsonAsync<List<Khoa>>();
+    }
+    protected async Task OnSubmit()
+    {
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/Nganh/NganhAdd", @item);
+            await JsRuntime.InvokeVoidAsync("alert", "Saved Successfully!");
+            NavigationManager.NavigateTo("NganhList");
+        }
+        catch (Exception e)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "Error:" + e.Message);
+        }
+    }
+    void Cancel()
+    {
+        NavigationManager.NavigateTo("NganhList");
+    }
+}

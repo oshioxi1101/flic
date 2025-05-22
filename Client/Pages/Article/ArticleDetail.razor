@@ -1,0 +1,96 @@
+﻿@page "/ArticleDetail/{Id:int}"
+@using Flic.Shared
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+
+<AuthorizeView>
+    <NotAuthorized>
+        <div class="flex items-center justify-center h-40">
+            <span class="text-lg font-semibold text-red-500">Bạn không có quyền truy cập</span>
+        </div>
+    </NotAuthorized>
+    <Authorized Context="Auth">
+        <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl mt-8 mb-12 p-8">
+            <div>
+                <h1 class="text-3xl font-bold text-indigo-800 mb-4">@((MarkupString)item.Title)</h1>
+                @if (!string.IsNullOrWhiteSpace(item.ImagePath))
+                {
+                    <img src="@item.ImagePath" alt="Ảnh đại diện" class="w-full max-h-80 object-cover rounded-xl mb-6 shadow" />
+                }
+                <div class="prose max-w-none text-gray-800" style="font-size: 1.14rem;">
+                    @((MarkupString)item.ArticleContent)
+                </div>
+            </div>
+
+            <hr class="my-8 border-indigo-200" />
+
+            <div>
+                <div class="mb-3 text-lg font-semibold text-indigo-700">Tin cũ hơn</div>
+                <ul class="space-y-2 pl-4">
+                    @for (int i = 0; i < list.Count; i++)
+                    {
+                        var it = list[i];
+                        if (it.Id != item.Id)
+                        {
+                            <li>
+                                <a href="/ArticleDetail/@it.Id"
+                                   @onclick="@(()=>OnLinkClick(it.Id))" @onclick:preventDefault
+                                   class="text-indigo-600 hover:underline hover:text-indigo-800 transition font-medium">
+                                    @((MarkupString)it.Title)
+                                </a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="text-gray-400 font-semibold">@((MarkupString)it.Title)</li>
+                        }
+                    }
+                </ul>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    Article item = new Article();
+    List<Article> list = new List<Article>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/Article/ArticleGetList");
+            response.EnsureSuccessStatusCode();
+            if (response.IsSuccessStatusCode)
+            {
+                list = await response.Content.ReadFromJsonAsync<List<Article>>();
+            }
+            else
+            {
+                await JsRuntime.InvokeVoidAsync("alert", "Error: " + response.StatusCode + " " + response.Content.ToString());
+            }
+
+            response = await Http.GetAsync("api/Article/ArticleGetByID/" + Id);
+            if (response.IsSuccessStatusCode)
+            {
+                item = await response.Content.ReadFromJsonAsync<Article>();
+            }
+            else
+            {
+                await JsRuntime.InvokeVoidAsync("alert", "Error: " + response.StatusCode + " " + response.Content.ToString());
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+    }
+
+    protected async Task OnLinkClick(int id)
+    {
+        InvokeAsync(async () => { Id = id; item = await Http.GetFromJsonAsync<Article>("api/Article/ArticleGetByID/" + Id.ToString()); StateHasChanged(); });
+
+    }
+}

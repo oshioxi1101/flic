@@ -1,0 +1,126 @@
+﻿@page "/tracuuhp"
+@using Flic.Shared
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+
+<!-- Import Tailwind CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+
+
+<!-- Main Content -->
+<main class="container mx-auto px-4 py-12">
+    <!-- Search Form -->
+    <section class="bg-white p-6 rounded-lg shadow-md mb-12">
+        <h2 class="text-2xl font-semibold text-blue-900 mb-6">Tra cứu thông tin học phí</h2>
+        <RadzenTemplateForm TItem="TracuuTT" Data=@item Submit=@OnSubmit>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                    <RadzenLabel Component="CCCD" Text="Mã sinh viên" class="block text-gray-700 font-medium mb-1" />
+                    <RadzenTextBox Name="CCCD" @bind-Value=@item.CCCD
+                                   class="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500" />
+                    <RadzenRequiredValidator Component="CCCD" Text="Vui lòng nhập mã sinh viên"
+                                             class="text-red-600 text-sm mt-1" />
+                </div>
+                <div>
+                    <RadzenButton ButtonType="ButtonType.Submit" Text="Tìm"
+                                  class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors" />
+                </div>
+                <div class="hidden md:block"></div> <!-- Spacer for alignment -->
+            </div>
+        </RadzenTemplateForm>
+    </section>
+
+    <!-- Results Table -->
+    @if (ThuTienList != null && ThuTienList.Any())
+    {
+        <section class="bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-xl font-semibold text-blue-900 mb-4">Kết quả tra cứu</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-blue-100 text-blue-900">
+                            <th class="p-4 font-semibold border-b border-gray-200">Mã sinh viên</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Họ tên</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Khóa</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Lớp</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Loại khoản thu</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Kỳ thanh toán</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var it in ThuTienList)
+                        {
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="p-4 border-b border-gray-200">@it.MaSinhVien</td>
+                                <td class="p-4 border-b border-gray-200">@it.HoDem @it.Ten</td>
+                                <td class="p-4 border-b border-gray-200">@it.KhoahocID</td>
+                                <td class="p-4 border-b border-gray-200">@it.LopID</td>
+                                <td class="p-4 border-b border-gray-200">@it.LoaiKhoanthuID</td>
+                                <td class="p-4 border-b border-gray-200">@it.KyThanhToan</td>
+                                <td class="p-4 border-b border-gray-200">
+                                    @if (it.TrangThai == 1)
+                                    {
+                                        <span class="text-green-600 font-medium">Đã thanh toán</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-red-600 font-medium">Chưa thanh toán</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+    else if (ThuTienList != null && !ThuTienList.Any())
+    {
+        <section class="bg-blue-100 text-blue-800 p-4 rounded-md">
+            Không tìm thấy thông tin học phí cho mã sinh viên này.
+        </section>
+    }
+</main>
+
+
+@code {
+    [Parameter]
+    public string Id { get; set; }
+    string ErrMessage = "";
+    TracuuTT item = new TracuuTT();
+    List<ThuTienView> ThuTienList = new List<ThuTienView>();
+
+    protected override async Task OnInitializedAsync()
+    {
+    }
+
+    protected async Task OnSubmit()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/Thutien/ThutienGetByMSV/" + item.CCCD);
+            if (response.IsSuccessStatusCode)
+            {
+                ThuTienList = await response.Content.ReadFromJsonAsync<List<ThuTienView>>();
+            }
+            else
+            {
+                ThuTienList = new List<ThuTienView>();
+                await JsRuntime.InvokeVoidAsync("alert", "Không tìm thấy thông tin!");
+            }
+            this.StateHasChanged();
+        }
+        catch (Exception e)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", $"Đã xảy ra lỗi: {e.Message}");
+        }
+    }
+
+    void Cancel()
+    {
+        // NavigationManager.NavigateTo("KhoahocList");
+    }
+}

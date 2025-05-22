@@ -1,0 +1,112 @@
+﻿@page "/AccountEdit/{Id}"
+@using Flic.Client.Services
+@using Flic.Shared
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+@inject HttpClient _httpClient
+
+<div class="flex min-h-screen items-center justify-center bg-gray-100">
+    <div class="bg-white shadow-xl rounded-2xl px-8 py-10 w-full max-w-md">
+        <h2 class="text-2xl font-bold text-center mb-8 text-indigo-700">Cập nhật tài khoản</h2>
+        @if (ShowErrors)
+        {
+            <div class="mb-6 rounded-xl bg-red-50 px-4 py-3 text-red-600 border border-red-200 text-center">
+                @foreach (var error in Errors ?? new[] { "Đã có lỗi xảy ra. Vui lòng kiểm tra lại thông tin!" })
+                {
+                    <div>@error</div>
+                }
+            </div>
+        }
+        <EditForm Model="RegisterModel" OnValidSubmit="HandleRegistration" class="space-y-6">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Username</label>
+                <InputText class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500" @bind-Value="RegisterModel.Username" />
+                <ValidationMessage For="@(() => RegisterModel.Username)" />
+            </div>
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Email</label>
+                <InputText class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500" @bind-Value="RegisterModel.Email" />
+                <ValidationMessage For="@(() => RegisterModel.Email)" />
+            </div>
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Password</label>
+                <InputText type="password" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500" @bind-Value="RegisterModel.Password" />
+                <ValidationMessage For="@(() => RegisterModel.Password)" />
+            </div>
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Confirm Password</label>
+                <InputText type="password" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500" @bind-Value="RegisterModel.ConfirmPassword" />
+                <ValidationMessage For="@(() => RegisterModel.ConfirmPassword)" />
+            </div>
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Vai trò</label>
+                <InputSelect class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500" @bind-Value="@RegisterModel.Role">
+                    <option value="">-- Chọn vai trò --</option>
+                    @foreach (var role in list)
+                    {
+                        <option value="@role.Name">@role.Name</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="flex justify-center mt-8 gap-4">
+                <button type="submit"
+                        class="bg-indigo-600 text-white font-semibold rounded-lg px-8 py-2 hover:bg-indigo-700 transition">
+                    Lưu thay đổi
+                </button>
+                <button type="button"
+                        class="bg-gray-200 text-gray-800 font-semibold rounded-lg px-8 py-2 hover:bg-gray-300 transition"
+                        @onclick="@(() => NavigationManager.NavigateTo("/AccountList"))">
+                    Hủy
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Id { get; set; }
+    private RegisterModel RegisterModel = new RegisterModel();
+    private bool ShowErrors = false;
+    private IEnumerable<string> Errors;
+    List<Microsoft.AspNetCore.Identity.IdentityRole> list = new List<Microsoft.AspNetCore.Identity.IdentityRole>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("api/Role/GetList");
+            response.EnsureSuccessStatusCode();
+            list = await response.Content.ReadFromJsonAsync<List<Microsoft.AspNetCore.Identity.IdentityRole>>();
+            RegisterModel = await AuthService.GetUserById(Id);
+        }
+        catch (Exception e)
+        {
+            Errors = new[] { e.Message };
+            ShowErrors = true;
+        }
+    }
+    private async Task HandleRegistration()
+    {
+        ShowErrors = false;
+
+        if (string.IsNullOrEmpty(RegisterModel.Role))
+        {
+            RegisterModel.Role = "TIN03";
+        }
+        var result = await AuthService.Update(RegisterModel);
+
+        if (result.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/AccountList");
+        }
+        else
+        {
+            Errors = new[] { "Cập nhật thất bại! Vui lòng kiểm tra lại thông tin hoặc thử lại." };
+            ShowErrors = true;
+        }
+    }
+}

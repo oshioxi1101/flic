@@ -1,0 +1,118 @@
+﻿@page "/ArticleList"
+@using Flic.Shared
+@using System.Net.Http.Headers
+@inject HttpClient _httpClient
+@inject Blazored.LocalStorage.ILocalStorageService _localStorage
+@inject NavigationManager NavigationManager
+@inject NorthwindService service
+@inject IJSRuntime JsRuntime
+
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <PageTitle>Danh sách bài viết</PageTitle>
+    <AuthorizeView>
+        <NotAuthorized>
+            <div class="flex items-center justify-center h-40">
+                <span class="text-lg font-semibold text-red-500">Bạn không có quyền truy cập</span>
+            </div>
+        </NotAuthorized>
+        <Authorized Context="Auth">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <h3 class="text-2xl font-bold text-indigo-700 flex-1">Danh sách bài viết</h3>
+                <div class="flex gap-4">
+                    <RadzenButton Click=@(args => OnClick("/ArticleAdd"))
+                                  Text="Thêm mới"
+                                  class="!bg-indigo-600 !text-white !font-semibold !rounded-lg !shadow hover:!bg-indigo-700 !px-6 !py-2 transition" />
+                    <RadzenButton Click=@(args => OnClick("/SectionList"))
+                                  Text="Quản lý mục tin"
+                                  class="!bg-gray-200 !text-gray-700 !font-semibold !rounded-lg !shadow hover:!bg-gray-300 !px-6 !py-2 transition" />
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow overflow-x-auto">
+                <RadzenDataGrid @ref="grid"
+                                AllowColumnPicking="false"
+                                AllowFiltering="true"
+                                FilterMode="FilterMode.Advanced"
+                                AllowPaging="true"
+                                AllowSorting="true"
+                                Data="@list"
+                                TItem="Article"
+                                PageSize="15"
+                                AllowColumnResize="true"
+                                class="min-w-full">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="Article" Property="Id" Title="ID" Width="90px" Filterable="false" />
+                        <RadzenDataGridColumn TItem="Article" Property="Title" Title="Tiêu đề" Width="300px" />
+                        <RadzenDataGridColumn TItem="Article" Property="ArticleContent" Title="Nội dung" />
+                        <RadzenDataGridColumn TItem="Article" Property="" Title="Thao tác" Filterable="false" Width="150px">
+                            <Template Context="data">
+                                <div class="flex gap-2">
+                                    <a href="/ArticleEdit/@data.Id"
+                                       class="text-blue-600 hover:text-blue-800 font-medium underline transition">Sửa</a>
+                                    <span>|</span>
+                                    <a href="/ArticleDelete/@data.Id"
+                                       class="text-red-600 hover:text-red-800 font-medium underline transition">Xóa</a>
+                                </div>
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </div>
+            @if (!string.IsNullOrEmpty(ErrMessage))
+            {
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mt-6">
+                    <strong>Lỗi:</strong> @ErrMessage
+                </div>
+            }
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    string ErrMessage = "";
+    List<Article> list = new List<Article>();
+    RadzenDataGrid<Article> grid;
+
+    void OnClick(string link)
+    {
+        NavigationManager.NavigateTo(link, true);
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("api/Article/ArticleGetList");
+            response.EnsureSuccessStatusCode();
+            if (response.IsSuccessStatusCode)
+            {
+                list = await response.Content.ReadFromJsonAsync<List<Article>>();
+            }
+            else
+            {
+                await JsRuntime.InvokeVoidAsync("alert", "Error: " + response.StatusCode + " " + response.Content.ToString());
+            }
+            ErrMessage = "";
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            ErrMessage = e.Message;
+        }
+    }
+    public void Export(string type)
+    {
+        try
+        {
+            Query q = new Query()
+            {
+                OrderBy = grid.Query.OrderBy,
+                Filter = grid.Query.Filter,
+                Select = string.Join(",", grid.ColumnsCollection.Where(c => c.GetVisible()))
+            };
+            service.Export("Articles", type, q);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+    }
+}

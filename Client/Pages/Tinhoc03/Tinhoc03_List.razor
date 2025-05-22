@@ -1,0 +1,303 @@
+﻿@page "/Tinhoc03List/"
+@page "/Tinhoc03List/{p:int}"
+@using Flic.Shared
+@inject HttpClient _httpClient
+@inject Blazored.LocalStorage.ILocalStorageService _localStorage
+@inject NavigationManager NavigationManager
+@inject NorthwindService service
+@inject IJSRuntime JsRuntime
+
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+<div class="mx-auto max-w-7xl px-4 py-6">
+    <PageTitle>Danh sách đăng ký thi chứng chỉ CNTT</PageTitle>
+    <AuthorizeView>
+        <NotAuthorized>
+            <div class="flex items-center justify-center py-20">
+                <span class="text-2xl text-red-600 font-bold">Bạn không có quyền truy cập</span>
+            </div>
+        </NotAuthorized>
+        <Authorized Context="Auth">
+            <div class="bg-white p-6 rounded-2xl shadow-md mb-6">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+                    <div class="flex-1 min-w-44">
+                        <RadzenDropDown Data="@_dotthiList" TextProperty="Name" ValueProperty="Id"
+                                        @bind-Value="@maDotthi"
+                                        Placeholder="--Chọn Đợt thi--"
+                                        AllowClear="true"
+                                        Multiple="true"
+                                        TValue="List<string>"
+                                        Change="@OnChange"
+                                        class="w-full border border-gray-300 focus:ring-2 focus:ring-indigo-500 rounded-lg p-2" />
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <RadzenButton Text="Export DSĐK" Icon="grid_on"
+                                      Click="@(() => ExportDSDK("tinhoc03dsdk"))"
+                                      ButtonStyle="ButtonStyle.Primary"
+                                      class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700" />
+                        <RadzenButton Text="Export DS đủ ĐK" Icon="grid_on"
+                                      Click="@(() => ExportDSDK("tinhoc03dsDuDK"))"
+                                      ButtonStyle="ButtonStyle.Primary"
+                                      class="bg-indigo-600 text-white px-4 py-2 rounded-lg shadow hover:bg-indigo-700" />
+                        <RadzenButton Click="@(() => OnClick("/Tinhoc03LapDSPT"))" Text="Lập DS phòng thi"
+                                      ButtonStyle="ButtonStyle.Primary"
+                                      class="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-700" />
+                    </div>
+                </div>
+                <div class="flex flex-col md:flex-row gap-3 items-center mb-4">
+                    <RadzenButton Click="@(() => OnClick("/Tinhoc03Register"))" Text="Thêm mới"
+                                  ButtonStyle="ButtonStyle.Primary"
+                                  class="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700" />
+                    <RadzenTextBox Name="KeyWord" @bind-Value="@KeyWord" Placeholder="Tìm theo tên, CCCD, email..."
+                                   class="flex-1 border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500" />
+                    <RadzenButton Click="@OnSearch" Text="Tìm"
+                                  ButtonStyle="ButtonStyle.Primary"
+                                  class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700" />
+                    <RadzenButton Click="@OnClear" Text="Xóa bộ lọc"
+                                  ButtonStyle="ButtonStyle.Primary"
+                                  class="bg-gray-500 text-white px-4 py-2 rounded-lg shadow hover:bg-gray-700" />
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="bg-white rounded-2xl shadow overflow-x-auto mb-6">
+                @if (list != null && list.Any())
+                {
+                    <table class="min-w-full border-separate border-spacing-y-1">
+                        <thead class="bg-indigo-100 sticky top-0 z-10">
+                            <tr>
+                                <th class="py-3 px-3 text-left font-semibold text-gray-700">
+                                    STT
+                                    <div class="inline-flex flex-col ml-1">
+                                        <img @onclick="@(() => SortBy("STT", "ASC"))" src="images/arrow-up-01-512.webp"
+                                             class="w-4 h-4 cursor-pointer hover:opacity-70" />
+                                        <img @onclick="@(() => SortBy("STT", "DES"))" src="images/arrow-down-01-512.webp"
+                                             class="w-4 h-4 cursor-pointer hover:opacity-70" />
+                                    </div>
+                                </th>
+                                <th class="py-3 px-3 text-left font-semibold text-gray-700">
+                                    Họ đệm
+                                    <div class="inline-flex flex-col ml-1">
+                                        <img @onclick="@(() => SortBy("HO", "ASC"))" src="images/arrow-up-01-512.webp"
+                                             class="w-4 h-4 cursor-pointer hover:opacity-70" />
+                                        <img @onclick="@(() => SortBy("HO", "DES"))" src="images/arrow-down-01-512.webp"
+                                             class="w-4 h-4 cursor-pointer hover:opacity-70" />
+                                    </div>
+                                </th>
+                                <th class="py-3 px-3 text-left font-semibold text-gray-700">
+                                    Tên
+                                    <div class="inline-flex flex-col ml-1">
+                                        <img @onclick="@(() => SortBy("TEN", "ASC"))" src="images/arrow-up-01-512.webp"
+                                             class="w-4 h-4 cursor-pointer hover:opacity-70" />
+                                        <img @onclick="@(() => SortBy("TEN", "DES"))" src="images/arrow-down-01-512.webp"
+                                             class="w-4 h-4 cursor-pointer hover:opacity-70" />
+                                    </div>
+                                </th>
+                                <th class="py-3 px-3 text-left font-semibold text-gray-700">Ngày sinh</th>
+                                <th class="py-3 px-3 text-left font-semibold text-gray-700">CCCD</th>
+                                <th class="py-3 px-3 text-left font-semibold text-gray-700">Nơi sinh</th>
+                                <th class="py-3 px-3 text-center font-semibold text-gray-700">Đủ ĐK</th>
+                                <th class="py-3 px-3 text-center font-semibold text-gray-700">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in list.Skip(30 * (curPage - 1)).Take(30))
+                            {
+                                <tr class="even:bg-gray-50 hover:bg-blue-50 transition-all">
+                                    <td class="py-2 px-3">@item.stt</td>
+                                    <td class="py-2 px-3">@item.HovaDem</td>
+                                    <td class="py-2 px-3">@item.Ten</td>
+                                    <td class="py-2 px-3">@item.NgaySinh</td>
+                                    <td class="py-2 px-3">@item.CCCD</td>
+                                    <td class="py-2 px-3">@item.NoiSinh_Tinh_Ten</td>
+                                    <td class="py-2 px-3 text-center">
+                                        <input type="checkbox" id="@item.Id" checked="@item.DuDKThi"
+                                               @onchange="(e => CheckboxChanged(e, item.Id.GetValueOrDefault()))"
+                                               class="h-5 w-5 accent-indigo-600 rounded focus:ring-2 focus:ring-indigo-500" />
+                                    </td>
+                                    <td class="py-2 px-3 text-center">
+                                        <a href="/Tinhoc03Update/@item.Id" target="_blank"
+                                           class="text-indigo-600 hover:underline font-medium mr-2">Sửa</a>
+                                        <span class="text-gray-300">|</span>
+                                        <a href="/Tinhoc03Detail/@item.Id" target="_blank"
+                                           class="text-green-600 hover:underline font-medium ml-2">Chi tiết</a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="flex flex-col items-center justify-center py-12 text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9 17v-2a4 4 0 018 0v2M5 11a7 7 0 0114 0v1a5 5 0 01-5 5h-4a5 5 0 01-5-5v-1z" />
+                        </svg>
+                        <span class="text-xl">Không có dữ liệu để hiển thị.</span>
+                    </div>
+                }
+            </div>
+            <!-- Pagination & Stats -->
+            @if (list != null && list.Any())
+            {
+                <div class="flex flex-col sm:flex-row sm:justify-between items-center gap-3">
+                    <div class="flex flex-wrap gap-2">
+                        @{
+                            int numPage = (int)Math.Ceiling((double)list.Count() / 30);
+                            for (int i = 1; i <= numPage; i++)
+                            {
+                                <a href="/Tinhoc03List/@i"
+                                   class="@(i == curPage ? "bg-indigo-600 text-white font-semibold" : "bg-gray-200 text-gray-700") px-3 py-1.5 rounded-lg shadow hover:bg-indigo-500 hover:text-white transition">
+                                    @i
+                                </a>
+                            }
+                        }
+                    </div>
+                    <div class="text-sm text-gray-600">
+                        <span>Tổng đăng ký: <span class="font-bold">@list.Count()</span></span>
+                        <span class="mx-2">|</span>
+                        <span>Đăng ký ôn: <span class="font-bold">@list.Count(m => m.DKOnThi == 1)</span></span>
+                    </div>
+                </div>
+            }
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    [Parameter]
+    public int p { get; set; }
+
+    IEnumerable<DangkyTH03_View> list;
+    IEnumerable<DangkyTH03_View> full_list;
+    string ErrMessage = "";
+    RadzenDataGrid<DangkyTH03_View> grid;
+    List<string> dotthList = new List<string>();
+    IEnumerable<string> selectedDotthi;
+    List<bool> DuDKthiList = new List<bool>();
+    IEnumerable<bool> selectedDuDKThi;
+    List<Dotthi> _dotthiList;
+    bool isLoading;
+    int count;
+    List<string> maDotthi = new List<string>();
+    private string KeyWord = null;
+    public int curPage = 1;
+
+    private async Task OnClear()
+    {
+        KeyWord = null;
+        list = new List<DangkyTH03_View>(full_list);
+        StateHasChanged();
+    }
+
+    private async Task OnSearch()
+    {
+        if (string.IsNullOrEmpty(KeyWord))
+        {
+            list = new List<DangkyTH03_View>(full_list);
+        }
+        else
+        {
+            full_list = new List<DangkyTH03_View>(list);
+            list = list.Where(m => m.Ten.Contains(KeyWord, StringComparison.OrdinalIgnoreCase) || 
+                                   m.HovaDem.Contains(KeyWord, StringComparison.OrdinalIgnoreCase) || 
+                                   m.CCCD.Contains(KeyWord, StringComparison.OrdinalIgnoreCase) || 
+                                   m.Email.Contains(KeyWord, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+        StateHasChanged();
+    }
+
+    private async Task SortBy(string col, string method)
+    {
+        if (col == "STT")
+        {
+            list = method == "DES" ? list.OrderByDescending(m => m.stt) : list.OrderBy(m => m.stt);
+        }
+        else if (col == "TEN")
+        {
+            list = method == "DES" ? list.OrderByDescending(m => m.Ten) : list.OrderBy(m => m.Ten);
+        }
+        else if (col == "HO")
+        {
+            list = method == "DES" ? list.OrderByDescending(m => m.HovaDem) : list.OrderBy(m => m.HovaDem);
+        }
+        StateHasChanged();
+    }
+
+    private async Task CheckboxChanged(ChangeEventArgs e, int id)
+    {
+        if (list == null) return; // safeguard
+
+        // Convert the incoming 'e.Value' to bool safely
+        bool newVal = e.Value is bool b && b;
+        var item = list.FirstOrDefault(m => m.Id == id);
+        if (item != null)
+        {
+            item.DuDKThi = newVal;
+            var obj = new ChangeDuDKState { id = id };
+            var response = await _httpClient.PostAsJsonAsync("api/DangkyTH03/TH03ChangeDuDKState", obj);
+            if (!response.IsSuccessStatusCode)
+            {
+                await JsRuntime.InvokeVoidAsync("alert", $"Error: {response.StatusCode} {await response.Content.ReadAsStringAsync()}");
+            }
+        }
+        StateHasChanged();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (p > 0 && curPage != p)
+        {
+            curPage = p;
+        }
+    }
+
+    private void OnClick(string link)
+    {
+        NavigationManager.NavigateTo(link, true);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        curPage = p > 0 ? p : 1;
+        try
+        {
+            _dotthiList = await _httpClient.GetFromJsonAsync<List<Dotthi>>("api/Dotthi/DotthiGetList");
+        }
+        catch (Exception e)
+        {
+            ErrMessage = e.Message;
+            Console.WriteLine(e.Message);
+        }
+    }
+
+    private async Task OnChange(object args)
+    {
+        if (maDotthi != null && maDotthi.Any())
+        {
+            string combinedString = string.Join(";", maDotthi);
+            var response = await _httpClient.GetAsync($"api/DangkyTH03/TH03GetListView/{combinedString}");
+            if (response.IsSuccessStatusCode)
+            {
+                list = await response.Content.ReadFromJsonAsync<List<DangkyTH03_View>>();
+                full_list = list;
+                StateHasChanged();
+            }
+        }
+    }
+
+    public async Task ExportDSDK(string type)
+    {
+        try
+        {
+            string combinedString = string.Join(";", maDotthi);
+            string url = $"/export/{type}/excel/{combinedString}";
+            NavigationManager.NavigateTo(url, true);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+    }
+}

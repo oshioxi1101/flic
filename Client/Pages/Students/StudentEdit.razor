@@ -1,0 +1,202 @@
+﻿@page "/StudentEdit/{id:int}"
+@using Flic.Shared
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+
+<div class="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-xl mt-8">
+    <h2 class="text-2xl font-bold text-indigo-700 mb-8 text-center">Sửa thông tin Sinh viên</h2>
+    @if (!string.IsNullOrEmpty(ErrMessage))
+    {
+        <div class="mb-4 p-3 bg-red-50 border border-red-300 text-red-700 rounded">@ErrMessage</div>
+    }
+    <EditForm Model="@item" OnValidSubmit="@Save" class="space-y-8">
+        <!-- Khóa, Khoa, Ngành, Lớp -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Khóa học</label>
+                <InputSelect class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-400" @bind-Value="@item.KhoahocID">
+                    <option value="">---Chọn Khóa học---</option>
+                    @foreach (var it in KhoahocList)
+                    {
+                        <option value="@it.Id">@it.Name</option>
+                    }
+                </InputSelect>
+            </div>
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Khoa</label>
+                <InputSelect class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-400"
+                             ValueChanged="@((string value) => KhoaHasChanged(value))"
+                             ValueExpression="@(() => item.KhoaID)" Value="@item.KhoaID">
+                    <option value="">---Chọn Khoa---</option>
+                    @foreach (var it in KhoaList)
+                    {
+                        <option value="@it.Id">@it.Name</option>
+                    }
+                </InputSelect>
+            </div>
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Ngành</label>
+                <InputSelect class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-400"
+                             ValueChanged="@((string value) => NganhHasChanged(value))"
+                             ValueExpression="@(() => item.NganhID)" Value="@item.NganhID">
+                    <option value="">---Chọn Ngành---</option>
+                    @foreach (var it in NganhList)
+                    {
+                        <option value="@it.Id">@it.Name</option>
+                    }
+                </InputSelect>
+            </div>
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Lớp</label>
+                <InputSelect class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-400" @bind-Value="@item.LopID">
+                    <option value="">---Chọn Lớp---</option>
+                    @foreach (var it in LopList)
+                    {
+                        <option value="@it.Id">@it.Name</option>
+                    }
+                </InputSelect>
+            </div>
+        </div>
+        <!-- Thông tin cá nhân -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Mã Sinh viên</label>
+                <input class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-400" @bind="@item.MaSV" />
+            </div>
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Họ và đệm</label>
+                <input class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-400" @bind="@item.HoDem" />
+            </div>
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Tên</label>
+                <input class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-400" @bind="@item.Ten" />
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Ngày sinh</label>
+                <input class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-400" @bind="@item.Ngaysinh" />
+            </div>
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Email</label>
+                <input class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-400" @bind="@item.Email" />
+            </div>
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Điện thoại</label>
+                <input class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-400" @bind="@item.DienThoai" />
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">CCCD</label>
+                <input class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-400" @bind="@item.CCCD" />
+            </div>
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Số TK</label>
+                <input class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-400" @bind="@item.SoTK" />
+            </div>
+            <div>
+                <label class="block mb-1 font-medium text-gray-700">Trạng thái</label>
+                <InputSelect class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-400" @bind-Value="@item.Trangthai">
+                    <option value="">---Chọn Trạng thái---</option>
+                    @foreach (var it in TrangthaiList)
+                    {
+                        <option value="@it.Id">@it.Name</option>
+                    }
+                </InputSelect>
+            </div>
+        </div>
+        <div class="flex justify-center gap-6 mt-8">
+            <button type="submit" class="bg-indigo-600 text-white font-semibold px-8 py-2 rounded-lg shadow hover:bg-indigo-700 transition">Lưu</button>
+            <button type="button" class="bg-gray-300 text-gray-800 font-semibold px-8 py-2 rounded-lg shadow hover:bg-gray-400 transition" @onclick="Cancel">Hủy</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public int id { get; set; }
+    Student item = new Student();
+    List<Khoa> KhoaList = new List<Khoa>();
+    List<Khoahoc> KhoahocList = new List<Khoahoc>();
+    List<Nganh> NganhList = new List<Nganh>();
+    List<Lop> LopList = new List<Lop>();
+    List<StudentStatus> TrangthaiList = new List<StudentStatus>();
+    public string ErrMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            item = await Http.GetFromJsonAsync<Student>("api/Student/StudentGetByID/" + id);
+            var response = await Http.GetAsync("api/Khoa/KhoaGetList");
+            KhoaList = await response.Content.ReadFromJsonAsync<List<Khoa>>();
+            response = await Http.GetAsync("api/Khoahoc/KhoahocGetList");
+            KhoahocList = await response.Content.ReadFromJsonAsync<List<Khoahoc>>();
+            response = await Http.GetAsync("api/Nganh/NganhGetListByKhoa/" + item.KhoaID);
+            NganhList = await response.Content.ReadFromJsonAsync<List<Nganh>>();
+            response = await Http.GetAsync("api/Lop/LopGetListByKhoahocNganh/" + item.KhoahocID + "/" + item.NganhID);
+            LopList = await response.Content.ReadFromJsonAsync<List<Lop>>();
+            response = await Http.GetAsync("api/StudentStatus/StudentStatusGetList");
+            TrangthaiList = await response.Content.ReadFromJsonAsync<List<StudentStatus>>();
+            ErrMessage = "";
+        }
+        catch (Exception e)
+        {
+            ErrMessage = e.Message;
+        }
+    }
+    protected async Task Save()
+    {
+        try
+        {
+            var response = await Http.PutAsJsonAsync("api/Student/StudentUpdate", @item);
+            await JsRuntime.InvokeVoidAsync("alert", "Saved Successfully!");
+            NavigationManager.NavigateTo("StudentList");
+            ErrMessage = "";
+        }
+        catch (Exception e)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "Error:" + e.Message);
+            ErrMessage = e.Message;
+        }
+    }
+    void Cancel()
+    {
+        NavigationManager.NavigateTo("StudentList");
+    }
+    private async Task KhoaHasChanged(string value)
+    {
+        item.KhoaID = value;
+        if (value == "")
+        {
+            NganhList.Clear();
+        }
+        else
+        {
+            await LoadNganh(value);
+        }
+    }
+    private async Task LoadNganh(string khoaId)
+    {
+        var response = await Http.GetAsync("api/Nganh/NganhGetListByKhoa/" + khoaId);
+        NganhList = await response.Content.ReadFromJsonAsync<List<Nganh>>();
+    }
+    private async Task NganhHasChanged(string value)
+    {
+        item.NganhID = value;
+        if (value == "")
+        {
+            LopList.Clear();
+        }
+        else
+        {
+            await LoadLop(value);
+        }
+    }
+    private async Task LoadLop(string nganhId)
+    {
+        var response = await Http.GetAsync("api/Lop/LopGetListByKhoahocNganh/" + item.KhoahocID + "/" + nganhId);
+        LopList = await response.Content.ReadFromJsonAsync<List<Lop>>();
+    }
+}

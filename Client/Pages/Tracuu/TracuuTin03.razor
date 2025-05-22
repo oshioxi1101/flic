@@ -1,0 +1,147 @@
+﻿@page "/tracuuTin03"
+@using Flic.Shared
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+
+<!-- Import Tailwind CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+
+<!-- Main Content -->
+<main class="container mx-auto px-4 py-12">
+    <!-- Search Form -->
+    <section class="bg-white p-6 rounded-lg shadow-md mb-12">
+        <h2 class="text-2xl font-semibold text-blue-900 mb-6">Tra cứu thông tin</h2>
+        <RadzenTemplateForm TItem="TracuuTT" Data=@item Submit=@OnSubmit>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                    <RadzenLabel Component="CCCD" Text="Số CCCD" class="block text-gray-700 font-medium mb-1" />
+                    <RadzenTextBox Name="CCCD" @bind-Value=@item.CCCD
+                                   class="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500" />
+                    <RadzenRequiredValidator Component="CCCD" Text="Vui lòng nhập số CCCD"
+                                             class="text-red-600 text-sm mt-1" />
+                </div>
+                <div>
+                    <RadzenButton ButtonType="ButtonType.Submit" Text="Tìm"
+                                  class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors" />
+                </div>
+                <div class="hidden md:block"></div> <!-- Spacer for alignment -->
+            </div>
+        </RadzenTemplateForm>
+    </section>
+
+    <!-- Results Table -->
+    @if (dsTin != null && dsTin.Any())
+    {
+        <section class="bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-xl font-semibold text-blue-900 mb-4">Kết quả tra cứu</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-blue-100 text-blue-900">
+                            <th class="p-4 font-semibold border-b border-gray-200">Thông tin thí sinh</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Thông tin đợt thi</th>
+                            <th class="p-4 font-semibold border-b border-gray-200">Thông tin thanh toán</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var it in dsTin)
+                        {
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="p-4 border-b border-gray-200">
+                                    <div class="text-gray-700">
+                                        <span class="font-medium">CCCD:</span> @it.CCCD
+                                    </div>
+                                    <div class="text-gray-700">
+                                        <span class="font-medium">Họ tên:</span> @it.HovaDem @it.Ten
+                                    </div>
+                                </td>
+                                <td class="p-4 border-b border-gray-200">
+                                    <div class="text-gray-700">
+                                        <span class="font-medium">Đợt thi:</span> @it.DotThi,
+                                        <span class="font-medium">Phòng thi:</span> @it.PhongThi,
+                                        <span class="font-medium">SBD:</span> @it.SoBD
+                                    </div>
+                                    <div class="text-gray-700">
+                                        <span class="font-medium">Điểm lý thuyết:</span> @it.DiemLT,
+                                        <span class="font-medium">Điểm thực hành:</span> @it.DiemTH
+                                    </div>
+                                </td>
+                                <td class="p-4 border-b border-gray-200">
+                                    <div class="text-gray-700">
+                                        <span class="font-medium">Lệ phí thi:</span> @it.LePhiThi,
+                                        <span class="font-medium">Lệ phí ôn:</span> @it.LePhiOn
+                                    </div>
+                                    <div class="text-gray-700">
+                                        <span class="font-medium">Trạng thái:</span>
+                                        @if (it.PaymentSuccess != null && it.PaymentSuccess.Value)
+                                        {
+                                            <span class="text-green-600 font-medium">Đã thanh toán</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-red-600 font-medium">Chưa thanh toán</span>
+                                        }
+                                    </div>
+                                    <div class="mt-2">
+                                        <a href="/Tinhoc03Detail/@it.Id"
+                                           class="text-blue-600 hover:text-blue-800 transition-colors">Xem chi tiết</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+    else if (dsTin != null && !dsTin.Any())
+    {
+        <section class="bg-blue-100 text-blue-800 p-4 rounded-md">
+            Không tìm thấy thông tin cho số CCCD này.
+        </section>
+    }
+</main>
+
+
+
+@code {
+    [Parameter]
+    public string Id { get; set; }
+    string ErrMessage = "";
+    TracuuTT item = new TracuuTT();
+    public List<DangkyTH03> dsTin;
+
+    protected override async Task OnInitializedAsync()
+    {
+    }
+
+    protected async Task OnSubmit()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/DangkyTH03/TH03GetByCCCD/" + item.CCCD);
+            if (response.IsSuccessStatusCode)
+            {
+                dsTin = await response.Content.ReadFromJsonAsync<List<DangkyTH03>>();
+            }
+            else
+            {
+                dsTin = new List<DangkyTH03>();
+                await JsRuntime.InvokeVoidAsync("alert", "Không tìm thấy thông tin!");
+            }
+            this.StateHasChanged();
+        }
+        catch (Exception e)
+        {
+            dsTin = new List<DangkyTH03>();
+            await JsRuntime.InvokeVoidAsync("alert", $"Đã xảy ra lỗi: {e.Message}");
+        }
+    }
+
+    void Cancel()
+    {
+        // NavigationManager.NavigateTo("KhoahocList");
+    }
+}

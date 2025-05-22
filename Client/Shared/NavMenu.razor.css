@@ -1,0 +1,63 @@
+﻿/* Tùy chỉnh sidebar */
+aside {
+    top: 4rem; /* Đặt dưới navbar (h-16 = 4rem) */
+    height: calc(100vh - 4rem); /* Chiều cao đầy đủ trừ navbar */
+    z-index: 40; /* Đảm bảo sidebar nằm dưới navbar nhưng trên content */
+}
+
+/* Hiệu ứng cho main content */
+main {
+    min-height: calc(100vh - 4rem); /* Đảm bảo main chiếm hết chiều cao */
+}
+
+/* Tùy chỉnh cho mobile */
+@media (max-width: 640px) {
+    aside {
+        width: 75% !important; /* Sidebar chiếm 75% màn hình trên mobile */
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5); /* Thêm bóng khi mở */
+    }
+
+        /* Nền mờ khi sidebar mở */
+        aside.translate-x-0 ~ main::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 30;
+            transition: opacity 0.3s ease-in-out;
+            opacity: 1;
+        }
+
+        /* Ẩn nền mờ khi sidebar đóng */
+        aside.-translate-x-full ~ main::before {
+            opacity: 0;
+            pointer-events: none;
+        }
+}
+
+/* Tùy chỉnh cho desktop */
+@media (min-width: 640px) {
+    aside {
+        position: static !important; /* Sidebar cố định trên desktop */
+        transform: translateX(0) !important; /* Luôn hiển thị */
+    }
+}
+
+/* Tùy chỉnh NavLink */
+nav a:hover,
+nav a:focus {
+    outline: none;
+    background-color: #4a5568; /* Màu hover nhẹ */
+}
+
+/* Tùy chỉnh biểu tượng toggle */
+button svg {
+    transition: transform 0.3s ease;
+}
+
+button:hover svg {
+    transform: scale(1.1); /* Phóng to nhẹ khi hover */
+}

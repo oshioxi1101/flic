@@ -1,0 +1,388 @@
+﻿@page "/CourseDetails/{id:int}"
+@layout NoHeaderLayout
+@using Flic.Shared
+@using Flic.Shared.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IJSRuntime JSRuntime
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<!-- Import Tailwind CSS and Bootstrap JS -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<style>
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+</style>
+<header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="/" class="text-2xl font-bold text-indigo-600">FLIC-VYA</a>
+            <nav class="hidden md:flex space-x-6">
+                <a href="/" class="text-gray-600 hover:text-indigo-600">Home</a>
+                <a href="#about" class="text-gray-600 hover:text-indigo-600">Giới thiệu</a>
+                <a href="#services" class="text-gray-600 hover:text-indigo-600">Dịch vụ</a>
+                <a href="#courses" class="text-gray-600 hover:text-indigo-600">Khóa học</a>
+                <a href="#contact" class="text-gray-600 hover:text-indigo-600">Liên hệ</a>
+            </nav>
+            <a href="/Login" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Login</a>
+            <!-- Mobile Menu Toggle -->
+            <button class="md:hidden text-gray-600 focus:outline-none" @onclick="ToggleMobileMenu">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+                </svg>
+            </button>
+        </div>
+        <!-- Mobile Menu -->
+        @if (isMobileMenuOpen)
+        {
+            <div class="md:hidden bg-white shadow-md">
+                <nav class="flex flex-col px-4 py-2 space-y-2">
+                    <a href="/" class="text-gray-600 hover:text-indigo-600">Home</a>
+                    <a href="#about" class="text-gray-600 hover:text-indigo-600">Giới thiệu</a>
+                    <a href="#services" class="text-gray-600 hover:text-indigo-600">Dịch vụ</a>
+                    <a href="#courses" class="text-gray-600 hover:text-indigo-600">Khóa học</a>
+                    <a href="#contact" class="text-gray-600 hover:text-indigo-600">Liên hệ</a>
+                </nav>
+            </div>
+        }
+    </header>
+
+<div class="min-h-screen bg-gray-50">
+    
+    
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8 max-w-7xl pt-20 overflow-y-auto max-h-screen">
+        @if (isLoading)
+        {
+            <div class="flex flex-col items-center justify-center min-h-[50vh]">
+                <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
+                <p class="mt-4 text-gray-600 text-lg">Đang tải thông tin khóa học...</p>
+            </div>
+        }
+        else
+        {
+            <!-- Course Header -->
+            <section class="mb-8">
+                <nav class="mb-6" aria-label="breadcrumb">
+                    <ol class="flex flex-wrap text-sm text-gray-600">
+                        <li class="mr-2"><a href="/" class="hover:text-blue-600">Trang chủ</a></li>
+                        <li class="mr-2">/</li>
+                        <li class="mr-2"><a href="/Courses" class="hover:text-blue-600">Khóa học</a></li>
+                        <li class="mr-2">/</li>
+                        <li class="text-gray-800 font-medium">@course.TenLop</li>
+                    </ol>
+                </nav>
+                <div class="flex flex-col md:flex-row gap-6">
+                    <div class="md:w-2/3">
+                        <h1 class="text-3xl font-bold text-gray-800 mb-4">@course.TenLop</h1>
+                        <div class="flex flex-wrap gap-4 mb-4">
+                            <span class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                                @GetCourseTypeName(course.LoaiLop)
+                            </span>
+                            <span class="inline-flex items-center px-3 py-1 @(course.Trangthai == 1 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800") rounded-full text-sm">
+                                @(course.Trangthai == 1 ? "Đang mở" : "Đã đóng")
+                            </span>
+                        </div>
+                    </div>
+                    <div class="md:w-1/3">
+                        <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                            <div class="text-2xl font-bold text-gray-800">@FormatPrice(course.Hocphi) VNĐ</div>
+                            <div class="text-sm text-gray-600">Học phí trọn khóa</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Course Main Content -->
+            <section class="mb-12">
+                <div class="flex flex-col lg:flex-row gap-8">
+                    <!-- Left Column (Image & Action) -->
+                    <div class="lg:w-1/3 order-2 lg:order-1">
+                        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                            <div class="relative">
+                                <img src="@(string.IsNullOrEmpty(course.ImagePath) ? "images/vya_no_images.jfif" : course.ImagePath)"
+                                     alt="@course.TenLop" class="w-full h-64 object-cover">
+                                <span class="absolute top-4 left-4 px-3 py-1 @(course.Trangthai == 1 ? "bg-green-500" : "bg-red-500") text-white rounded-full text-sm">
+                                    @(course.Trangthai == 1 ? "Đang mở" : "Đã đóng")
+                                </span>
+                            </div>
+                            <div class="p-6">
+                                <button @onclick="RegisterForCourse" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed mb-6 flex items-center justify-center gap-2"
+                                        disabled="@(course.Trangthai != 1)">
+                                    Đăng ký khóa học ngay
+                                </button>
+                                <div class="space-y-4">
+                                    <div class="flex gap-3">
+                                        <div>
+                                            <h4 class="font-semibold text-gray-800">Thời gian học</h4>
+                                            <p class="text-sm text-gray-600">Lịch học linh hoạt, phù hợp với học viên</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-3">
+                                        <div>
+                                            <h4 class="font-semibold text-gray-800">Sĩ số lớp</h4>
+                                            <p class="text-sm text-gray-600">15-20 học viên/lớp</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-3">
+                                        <div>
+                                            <h4 class="font-semibold text-gray-800">Chứng chỉ</h4>
+                                            <p class="text-sm text-gray-600">Cấp chứng chỉ sau khi hoàn thành</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column (Tabs) -->
+                    <div class="lg:w-2/3 order-1 lg:order-2">
+                        <div class="bg-white rounded-lg shadow-md">
+                            <div class="border-b border-gray-200">
+                                <ul class="flex flex-wrap text-sm font-medium text-center text-gray-500">
+                                    <li>
+                                        <button class="inline-block p-4 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-600 active"
+                                                data-bs-toggle="tab" data-bs-target="#description">
+                                            Mô tả khóa học
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="inline-block p-4 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-600"
+                                                data-bs-toggle="tab" data-bs-target="#curriculum">
+                                            Nội dung chi tiết
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="inline-block p-4 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-600"
+                                                data-bs-toggle="tab" data-bs-target="#instructor">
+                                            Giảng viên
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="p-6">
+                                <div class="tab-content">
+                                    <!-- Description Tab -->
+                                    <div class="tab-pane fade show active" id="description">
+                                        <div class="prose max-w-none mb-8">@((MarkupString)course.Mota)</div>
+                                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Điểm nổi bật</h3>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div class="flex gap-3">
+                                                <div>
+                                                    <h4 class="font-semibold text-gray-800">Giảng viên chuyên môn cao</h4>
+                                                    <p class="text-sm text-gray-600">Đội ngũ giảng viên giàu kinh nghiệm</p>
+                                                </div>
+                                            </div>
+                                            <div class="flex gap-3">
+                                                <div>
+                                                    <h4 class="font-semibold text-gray-800">Nội dung cập nhật</h4>
+                                                    <p class="text-sm text-gray-600">Giáo trình theo xu hướng mới nhất</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Curriculum Tab -->
+                                    <div class="tab-pane fade" id="curriculum">
+                                        @if (!string.IsNullOrEmpty(course.ChiTiet))
+                                        {
+                                            <div class="prose max-w-none">@((MarkupString)course.ChiTiet)</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="text-center py-12">
+                                                <h3 class="text-xl font-semibold text-gray-800 mb-2">Nội dung đang được cập nhật</h3>
+                                                <p class="text-gray-600 mb-4">Vui lòng liên hệ để được tư vấn thêm.</p>
+                                                <a href="mailto:contact@flic-vya.edu.vn" class="inline-flex items-center px-4 py-2 bg-white border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50">
+                                                    Gửi email
+                                                </a>
+                                            </div>
+                                        }
+                                    </div>
+                                    <!-- Instructor Tab -->
+                                    <div class="tab-pane fade" id="instructor">
+                                        <div class="space-y-6">
+                                            <div class="flex flex-col sm:flex-row gap-6">
+                                                <img src="images/instructor-default.jpg" alt="Giảng viên" class="w-32 h-32 rounded-full object-cover">
+                                                <div>
+                                                    <h3 class="text-xl font-semibold text-gray-800">Đội ngũ giảng viên</h3>
+                                                    <p class="text-gray-600 mb-4">Chuyên gia đào tạo hàng đầu</p>
+                                                    <div class="flex flex-wrap gap-6">
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="font-medium">4.8/5</span>
+                                                            <span class="text-sm text-gray-600">Đánh giá</span>
+                                                        </div>
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="font-medium">2,500+</span>
+                                                            <span class="text-sm text-gray-600">Học viên</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-semibold text-gray-800 mb-2">Về giảng viên</h4>
+                                                <p class="text-gray-600">Đội ngũ giảng viên có trình độ chuyên môn cao và phương pháp giảng dạy hiện đại.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Enrollment CTA -->
+            <section class="bg-blue-50 rounded-lg p-6 mb-12">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">Sẵn sàng tham gia?</h2>
+                        <p class="text-gray-600">Đăng ký ngay để bắt đầu hành trình học tập!</p>
+                    </div>
+                    <button @onclick="RegisterForCourse" class="bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+                            disabled="@(course.Trangthai != 1)">
+                        Đăng ký ngay
+                    </button>
+                </div>
+            </section>
+
+            <!-- Related Courses -->
+            @if (relatedCourses != null && relatedCourses.Any(c => c.Id != course.Id))
+            {
+                <section class="mb-12">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Khóa học liên quan</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        @foreach (var item in relatedCourses.Where(c => c.Id != course.Id).Take(3))
+                        {
+                            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                                <img src="@(string.IsNullOrEmpty(item.ImagePath) ? "images/vya_no_images.jfif" : item.ImagePath)"
+                                     alt="@item.TenLop" class="w-full h-48 object-cover">
+                                <div class="p-4">
+                                    <h3 class="text-lg font-semibold text-gray-800 mb-2">@item.TenLop</h3>
+                                    <div class="text-blue-600 font-medium mb-2">@FormatPrice(item.Hocphi) VNĐ</div>
+                                    <a href="/CourseDetails/@item.Id" class="inline-flex items-center px-4 py-2 bg-white border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50">
+                                        Xem chi tiết
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="text-center mt-8">
+                        <a href="/Courses" class="inline-flex items-center px-4 py-2 bg-white border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50">
+                            Xem tất cả khóa học
+                        </a>
+                    </div>
+                </section>
+            }
+        }
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-4">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-sm">© 2025 FLIC-VYA. All rights reserved.</p>
+        </div>
+    </footer>
+</div>
+
+@code {
+    [Parameter]
+    public int id { get; set; }
+    private Lophoc course;
+    private List<Lophoc> relatedCourses;
+    private bool isMobileMenuOpen = false;
+    private bool isLoading = true;
+    private string user_name;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCourseData();
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        user_name = authState.User.Identity?.Name;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (id > 0)
+        {
+            await LoadCourseData();
+        }
+    }
+    private void ToggleMobileMenu()
+    {
+        isMobileMenuOpen = !isMobileMenuOpen;
+    }
+
+    private async Task LoadCourseData()
+    {
+        isLoading = true;
+        try
+        {
+            var response = await Http.GetAsync($"api/LopHoc/LophocGetByID/{id}");
+            if (response.IsSuccessStatusCode)
+            {
+                course = await response.Content.ReadFromJsonAsync<Lophoc>();
+                if (!string.IsNullOrEmpty(course.LoaiLop))
+                {
+                    var relatedResponse = await Http.GetAsync($"api/LopHoc/LopHocGetListByLoaiLop/{course.LoaiLop}");
+                    if (relatedResponse.IsSuccessStatusCode)
+                    {
+                        relatedCourses = await relatedResponse.Content.ReadFromJsonAsync<List<Lophoc>>();
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error loading course data: " + ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RegisterForCourse()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo($"/dangkykhoahocadd/{id}");
+        }
+        else
+        {
+            NavigationManager.NavigateTo($"/login?returnUrl=/CourseDetails/{id}");
+        }
+    }
+
+    private string FormatPrice(int price)
+    {
+        return price.ToString("N0");
+    }
+
+    private string GetCourseTypeName(string loaiLopId)
+    {
+        Dictionary<string, string> courseTypes = new()
+        {
+            { "1", "Tiếng Anh" },
+            { "2", "Tin học" },
+            { "3", "Tiếng Nhật" },
+            { "4", "Tiếng Trung" }
+        };
+        return courseTypes.GetValueOrDefault(loaiLopId, "Khóa học");
+    }
+}

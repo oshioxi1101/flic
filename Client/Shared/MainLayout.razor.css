@@ -1,0 +1,38 @@
+﻿/* Sidebar styles */
+.sidebar {
+    transition: transform 0.3s ease-in-out;
+}
+
+    .sidebar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+        background-color: rgba(0, 0, 0, 0.2);
+        border-radius: 3px;
+    }
+
+    .sidebar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+/* Nav link active state */
+.nav-link.active {
+    font-weight: 600;
+    background-color: #e0e7ff; /* Matches Tailwind's bg-indigo-100 */
+    color: #4338ca; /* Matches Tailwind's text-indigo-700 */
+}
+
+/* Ensure sidebar is hidden off-screen initially on mobile */
+@media (max-width: 767px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+}
+
+/* Fix sidebar position on desktop */
+@media (min-width: 768px) {
+    .sidebar {
+        transform: translateX(0);
+    }
+}

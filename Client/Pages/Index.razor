@@ -1,0 +1,403 @@
+﻿@page "/{mod:int?}"
+@page "/{mod:int?}/{aid:int?}"
+@layout NoHeaderLayout
+@using System.Security.Claims
+@using Flic.Client.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using Flic.Shared
+@using Flic.Shared.Models
+@using Newtonsoft.Json
+@inject HttpClient Http
+@inject IJSRuntime JsRuntime
+@using MudBlazor
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>FLIC-VYA - Trung Tâm Anh Ngữ & Tin Học</title>
+    <meta name="description" content="Trung tâm đào tạo tiếng Anh và tin học hàng đầu, cung cấp các khóa học chất lượng cao.">
+    <meta name="keywords" content="FLIC-VYA, tiếng Anh, tin học, khóa học">
+    <link href="assets/img/favicon.png" rel="icon">
+    <link href="assets/img/apple-touch-icon.png" rel="apple-touch-icon">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="font-poppins bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="/" class="text-2xl font-bold text-indigo-600">FLIC-VYA</a>
+            <nav class="hidden md:flex space-x-6">
+                <a href="/" class="text-gray-600 hover:text-indigo-600">Home</a>
+                <a href="#about" class="text-gray-600 hover:text-indigo-600">Giới thiệu</a>
+                <a href="#services" class="text-gray-600 hover:text-indigo-600">Dịch vụ</a>
+                <a href="#courses" class="text-gray-600 hover:text-indigo-600">Khóa học</a>
+                <a href="#contact" class="text-gray-600 hover:text-indigo-600">Liên hệ</a>
+            </nav>
+            <!-- Dropdown profile logic -->
+            @if (!isAuthenticated)
+            {
+                <a href="/login" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Đăng nhập</a>
+            }
+            else
+            {
+                <div class="relative">
+                    <button class="flex items-center bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition group"
+                            @onclick="ToggleDropdown">
+                        <svg class="w-6 h-6 rounded-full bg-white mr-2 ring-2 ring-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 15c2.414 0 4.676.572 6.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>@username</span>
+                        <svg class="w-4 h-4 ml-1 text-white opacity-60 group-hover:opacity-100 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    @if (showDropdown)
+                    {
+                        <div class="absolute right-0 mt-2 w-44 bg-white rounded-md shadow-lg border z-50 animate-fade-in"
+                             tabindex="0" @onfocusout="HandleFocusOut">
+                            <a href="/flic" class="block px-4 py-2 text-gray-700 hover:bg-indigo-50">Tài khoản</a>
+                            <button @onclick="Logout" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-indigo-50">Đăng xuất</button>
+                        </div>
+                    }
+                </div>
+            }
+            <!-- End profile dropdown -->
+            <!-- Mobile Menu Toggle -->
+            <button class="md:hidden text-gray-600 focus:outline-none" @onclick="ToggleMobileMenu">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+                </svg>
+            </button>
+        </div>
+        @if (isMobileMenuOpen)
+        {
+            <div class="md:hidden bg-white shadow-md">
+                <nav class="flex flex-col px-4 py-2 space-y-2">
+                    <a href="/" class="text-gray-600 hover:text-indigo-600">Home</a>
+                    <a href="#about" class="text-gray-600 hover:text-indigo-600">Giới thiệu</a>
+                    <a href="#services" class="text-gray-600 hover:text-indigo-600">Dịch vụ</a>
+                    <a href="#courses" class="text-gray-600 hover:text-indigo-600">Khóa học</a>
+                    <a href="#contact" class="text-gray-600 hover:text-indigo-600">Liên hệ</a>
+                    @if (!isAuthenticated)
+                    {
+                        <a href="/login" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 text-center">Đăng nhập</a>
+                    }
+                    else
+                    {
+                        <a href="/flic" class="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-md hover:bg-indigo-100 border border-indigo-600 text-center">Tài khoản</a>
+                        <button @onclick="Logout" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 w-full mt-2">Đăng xuất</button>
+                    }
+                </nav>
+            </div>
+        }
+    </header>
+
+
+    <!-- Hero Section -->
+    <section id="hero" class="bg-indigo-100 py-12 md:py-24">
+        <div class="container mx-auto px-4 text-center">
+            <h1 class="text-3xl md:text-5xl font-bold text-gray-800 mb-4">Chào Mừng Đến Với FLIC-VYA</h1>
+            <p class="text-lg md:text-xl text-gray-600 mb-6">Trung tâm đào tạo tiếng Anh và tin học hàng đầu, giúp bạn phát triển kỹ năng và nâng cao cơ hội nghề nghiệp.</p>
+            <a href="#courses" class="bg-indigo-600 text-white px-6 py-3 rounded-md hover:bg-indigo-700">Khám Phá Khóa Học</a>
+        </div>
+    </section>
+
+    <!-- Featured Services Section -->
+    <section id="featured-services" class="py-12">
+        <div class="container mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-8">Tại Sao Chọn Chúng Tôi?</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <i class="fas fa-heartbeat text-indigo-600 text-3xl mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-2">Phương Pháp Hiện Đại</h3>
+                    <p class="text-gray-600">Khóa học được thiết kế tiên tiến, giúp bạn tiếp thu nhanh và ứng dụng thực tế.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <i class="fas fa-user-md text-indigo-600 text-3xl mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-2">Giảng Viên Kinh Nghiệm</h3>
+                    <p class="text-gray-600">Đội ngũ giảng viên tận tâm, hỗ trợ bạn đạt được mục tiêu học tập.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <i class="fas fa-road text-indigo-600 text-3xl mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-2">Lộ Trình Cá Nhân Hóa</h3>
+                    <p class="text-gray-600">Chương trình học phù hợp với mọi cấp độ, từ cơ bản đến nâng cao.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <i class="fas fa-laptop-code text-indigo-600 text-3xl mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-2">Thực Hành Ứng Dụng</h3>
+                    <p class="text-gray-600">Học lý thuyết kết hợp thực hành, áp dụng ngay vào công việc.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-12 bg-white">
+        <div class="container mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-8">Về FLIC-VYA</h2>
+            <div class="flex flex-col md:flex-row items-center gap-8">
+                <div class="md:w-1/2">
+                    <img src="img/abouts.jpg" alt="About FLIC-VYA" class="w-full rounded-lg shadow-md">
+                </div>
+                <div class="md:w-1/2">
+                    <h3 class="text-xl font-semibold mb-4">Sứ Mệnh Của Chúng Tôi</h3>
+                    <ul class="space-y-2">
+                        <li class="flex items-start"><i class="bi bi-check2-all text-indigo-600 mr-2"></i> Giúp bạn tự tin giao tiếp tiếng Anh trong công việc và học tập.</li>
+                        <li class="flex items-start"><i class="bi bi-check2-all text-indigo-600 mr-2"></i> Đào tạo kỹ năng tin học từ cơ bản đến nâng cao.</li>
+                        <li class="flex items-start"><i class="bi bi-check2-all text-indigo-600 mr-2"></i> Phương pháp học hiện đại, dễ hiểu, hiệu quả cao.</li>
+                        <li class="flex items-start"><i class="bi bi-check2-all text-indigo-600 mr-2"></i> Giảng viên tận tâm, cơ sở vật chất hiện đại.</li>
+                        <li class="flex items-start"><i class="bi bi-check2-all text-indigo-600 mr-2"></i> Cam kết chất lượng với chứng chỉ uy tín.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section id="stats" class="py-12 bg-indigo-50">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
+                <div>
+                    <i class="fas fa-user-md text-indigo-600 text-3xl mb-2"></i>
+                    <h3 class="text-2xl font-bold">50</h3>
+                    <p class="text-gray-600">Giảng viên</p>
+                </div>
+                <div>
+                    <i class="far fa-hospital text-indigo-600 text-3xl mb-2"></i>
+                    <h3 class="text-2xl font-bold">5</h3>
+                    <p class="text-gray-600">Cơ sở</p>
+                </div>
+                <div>
+                    <i class="fas fa-users text-indigo-600 text-3xl mb-2"></i>
+                    <h3 class="text-2xl font-bold">1000</h3>
+                    <p class="text-gray-600">Học viên</p>
+                </div>
+                <div>
+                    <i class="fas fa-award text-indigo-600 text-3xl mb-2"></i>
+                    <h3 class="text-2xl font-bold">150</h3>
+                    <p class="text-gray-600">Chứng chỉ</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="services" class="py-12">
+        <div class="container mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-8">Dịch Vụ Của Chúng Tôi</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <i class="fas fa-book text-indigo-600 text-3xl mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-2">Đào Tạo Tiếng Anh</h3>
+                    <p class="text-gray-600">Khóa học từ cơ bản đến nâng cao, luyện thi TOEIC, IELTS, giao tiếp chuyên sâu.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <i class="fas fa-laptop text-indigo-600 text-3xl mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-2">Đào Tạo Tin Học</h3>
+                    <p class="text-gray-600">Tin học văn phòng, lập trình (Python, Java), thiết kế đồ họa (Photoshop, Canva).</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <i class="fas fa-headset text-indigo-600 text-3xl mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-2">Dịch Vụ Khác</h3>
+                    <p class="text-gray-600">Tư vấn định hướng, hỗ trợ học tập, cấp chứng chỉ hoàn thành khóa học.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Courses Section -->
+    <section id="courses" class="py-12 bg-white">
+        <div class="container mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-8">Các Khóa Học</h2>
+            @foreach (var loaiLH in LoaiLop_List)
+            {
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold text-indigo-600 text-center mb-4">@loaiLH.TenLop</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        @foreach (var item in list_course.Where(m => m.LoaiLop == loaiLH.Id))
+                        {
+                            <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition">
+                                <img src="@((item.ImagePath ?? "images/vya_no_images.jfif"))" alt="Course Image" class="w-full h-48 object-cover">
+                                <div class="p-4">
+                                    <h4 class="text-lg font-semibold mb-2">@item.TenLop</h4>
+                                    <p class="text-gray-600 mb-4">@((MarkupString)item.Mota)</p>
+                                    <a href="/CourseDetails/@item.Id" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Đăng Ký</a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="py-12 bg-indigo-50">
+        <div class="container mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-8">Liên Hệ</h2>
+            <div class="flex flex-col md:flex-row gap-8">
+                <div class="md:w-1/2">
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3724.813040181326!2d105.80000907596666!3d21.00161178855081!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3135ab39f434c6e7%3A0x123456789abcdef!2zSOG7jWMgdmnDqm4gVGhhbmggdGhpw6puIFZp4buHdCBOYW0!5e0!3m2!1sen!2s!4v1694000000000!5m2!1sen!2s"
+                            class="w-full h-64 rounded-lg" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                    <div class="mt-6 space-y-4">
+                        <div class="flex items-center">
+                            <i class="bi bi-geo-alt text-indigo-600 mr-2"></i>
+                            <p>Số 3, Phố Chùa Láng, Phường Láng Thượng, Quận Đống Đa, Hà Nội</p>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="bi bi-telephone text-indigo-600 mr-2"></i>
+                            <p>+84 5589554855</p>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="bi bi-envelope text-indigo-600 mr-2"></i>
+                            <p>info@edu.vn</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="md:w-1/2">
+                    <form action="forms/contact.php" method="post" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="text" name="name" class="form-control border rounded-md p-2 w-full" placeholder="Your Name" required>
+                            <input type="email" name="email" class="form-control border rounded-md p-2 w-full" placeholder="Your Email" required>
+                        </div>
+                        <input type="text" name="subject" class="form-control border rounded-md p-2 w-full" placeholder="Subject" required>
+                        <textarea name="message" class="form-control border rounded-md p-2 w-full" rows="4" placeholder="Message" required></textarea>
+                        <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 w-full">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">FLIC-VYA</h3>
+                    <p>Số 3, Phố Chùa Láng, Phường Láng Thượng, Quận Đống Đa, Hà Nội</p>
+                    <p class="mt-2"><strong>Phone:</strong> +84 5589554855</p>
+                    <p><strong>Email:</strong> info@edu.vn</p>
+                    <div class="flex space-x-4 mt-4">
+                        <a href="#" class="hover:text-indigo-400"><i class="bi bi-twitter-x"></i></a>
+                        <a href="#" class="hover:text-indigo-400"><i class="bi bi-facebook"></i></a>
+                        <a href="#" class="hover:text-indigo-400"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="hover:text-indigo-400"><i class="bi bi-linkedin"></i></a>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">Liên Kết</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="hover:text-indigo-400">Home</a></li>
+                        <li><a href="#about" class="hover:text-indigo-400">Giới thiệu</a></li>
+                        <li><a href="#services" class="hover:text-indigo-400">Dịch vụ</a></li>
+                        <li><a href="#courses" class="hover:text-indigo-400">Khóa học</a></li>
+                        <li><a href="#contact" class="hover:text-indigo-400">Liên hệ</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">Khóa Học</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="hover:text-indigo-400">Tiếng Anh</a></li>
+                        <li><a href="#" class="hover:text-indigo-400">Tin Học</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">Hỗ Trợ</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="hover:text-indigo-400">Hướng dẫn đăng ký</a></li>
+                        <li><a href="#" class="hover:text-indigo-400">Chính sách học phí</a></li>
+                        <li><a href="#" class="hover:text-indigo-400">Câu hỏi thường gặp</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="text-center mt-8">
+                <p>© Copyright <strong>FLIC-VYA</strong>. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scroll Top -->
+    <a href="#" class="fixed bottom-4 right-4 bg-indigo-600 text-white p-3 rounded-full hover:bg-indigo-700"><i class="bi bi-arrow-up-short"></i></a>
+</body>
+
+</html>
+
+@code {
+    [Parameter]
+    public Int32? mod { get; set; }
+    [Parameter]
+    public Int32? aid { get; set; }
+
+    // Khóa học
+    private DashboardResult item = new DashboardResult();
+    private List<Flic.Shared.Models.Article> list = new List<Flic.Shared.Models.Article>();
+    private List<Flic.Shared.Models.LoaiLophoc> LoaiLop_List = new List<Flic.Shared.Models.LoaiLophoc>();
+    private List<Flic.Shared.Models.Lophoc> list_course = new List<Flic.Shared.Models.Lophoc>();
+
+    // Auth/profile
+    private bool isMobileMenuOpen = false;
+    private bool isAuthenticated = false;
+    private string username = "";
+    private bool showDropdown = false;
+
+    private void ShowDropdown() => showDropdown = true;
+    private void HideDropdown() => showDropdown = false;
+    private void ToggleMobileMenu() => isMobileMenuOpen = !isMobileMenuOpen;
+
+    private void ToggleDropdown() => showDropdown = !showDropdown;
+    private void HandleFocusOut(FocusEventArgs e)
+    {
+        showDropdown = false;
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            item = await Http.GetFromJsonAsync<DashboardResult>("api/Dashboard");
+            var response = await Http.GetAsync("api/Article/ArticleGetList");
+            if (response.IsSuccessStatusCode)
+                list = await response.Content.ReadFromJsonAsync<List<Flic.Shared.Models.Article>>();
+
+            if (item != null)
+            {
+                response = await Http.GetAsync("api/Lophoc/LophocGetListActive");
+                if (response.IsSuccessStatusCode)
+                    list_course = await response.Content.ReadFromJsonAsync<List<Flic.Shared.Models.Lophoc>>();
+
+                response = await Http.GetAsync("api/LoaiLophoc/LoaiLophocGetListActive");
+                if (response.IsSuccessStatusCode)
+                    LoaiLop_List = await response.Content.ReadFromJsonAsync<List<Flic.Shared.Models.LoaiLophoc>>();
+            }
+
+            // Auth
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            isAuthenticated = user.Identity.IsAuthenticated;
+            username = isAuthenticated ? user.Identity.Name ?? "Tài khoản" : "";
+            this.StateHasChanged();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Error: " + e.Message);
+        }
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.Logout();
+        await JsRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
+        isAuthenticated = false;
+        username = "";
+        NavigationManager.NavigateTo("/login", true);
+    }
+}

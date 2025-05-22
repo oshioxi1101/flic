@@ -1,0 +1,155 @@
+﻿@page "/LoaiKhoanthuList"
+@using Flic.Shared
+@using System.Net.Http.Headers
+@inject HttpClient _httpClient
+@inject Blazored.LocalStorage.ILocalStorageService _localStorage
+@inject NavigationManager NavigationManager
+@inject NorthwindService service
+
+<!-- Import Tailwind CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+<div class="container mx-auto px-4 py-8">
+    <PageTitle>Danh sách Loại khoản thu</PageTitle>
+
+    <AuthorizeView>
+        <NotAuthorized>
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg max-w-lg mx-auto mt-8">
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p class="text-red-700">Bạn không có quyền truy cập trang này.</p>
+                </div>
+            </div>
+        </NotAuthorized>
+        <Authorized Context="Auth">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl font-bold text-gray-800">Danh sách Loại khoản thu</h1>
+                <div class="flex gap-3">
+                    <button @onclick='@(args => OnClick("/LoaiKhoanthuAdd"))'
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-300 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Thêm mới
+                    </button>
+                    <button @onclick="@(args => Export("excel"))"
+                            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-300 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-6l-3 3m0 0l3 3m-3-3h12" />
+                        </svg>
+                        Export XLS
+                    </button>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(ErrMessage))
+            {
+                <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg mb-6">
+                    <p class="text-red-700">@ErrMessage</p>
+                </div>
+            }
+
+            <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                @if (_list == null)
+                {
+                    <div class="text-center py-8">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                        <p class="mt-2 text-gray-600">Đang tải...</p>
+                    </div>
+                }
+                else if (_list.Count == 0)
+                {
+                    <div class="text-center py-8 bg-gray-50 rounded-lg">
+                        <p class="text-gray-600">Không có loại khoản thu nào được tìm thấy.</p>
+                    </div>
+                }
+                else
+                {
+                    <RadzenDataGrid @ref="grid"
+                                    AllowColumnPicking="false"
+                                    AllowFiltering="true"
+                                    FilterMode="FilterMode.Advanced"
+                                    AllowPaging="true"
+                                    AllowSorting="true"
+                                    Data="@_list"
+                                    TItem="LoaiKhoanthu"
+                                    PageSize="40"
+                                    AllowColumnResize="true"
+                                    class="w-full">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="LoaiKhoanthu" Property="MaLoaiKhoanThu" Title="ID" Width="140px" Filterable="false">
+                                <Template Context="data">
+                                    <span class="text-gray-900">@data.MaLoaiKhoanThu</span>
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="LoaiKhoanthu" Property="MoTa" Title="Mô tả">
+                                <Template Context="data">
+                                    <span class="text-gray-900">@data.MoTa</span>
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="LoaiKhoanthu" Property="" Title="Thao tác" Filterable="false" Width="140px">
+                                <Template Context="data">
+                                    <div class="flex justify-end gap-3">
+                                        <a href="/LoaiKhoanthuEdit/@data.MaLoaiKhoanThu"
+                                           class="text-blue-600 hover:text-blue-800">Sửa</a>
+                                        <a href="/LoaiKhoanthuDelete/@data.MaLoaiKhoanThu"
+                                           class="text-red-600 hover:text-red-800"
+                                           onclick="return confirm('Bạn có chắc muốn xóa loại khoản thu này?')">Xóa</a>
+                                    </div>
+                                </Template>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+                }
+            </div>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    string ErrMessage = "";
+    List<LoaiKhoanthu> _list = new();
+    RadzenDataGrid<LoaiKhoanthu> grid;
+
+    void OnClick(string link)
+    {
+        NavigationManager.NavigateTo(link, true);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("api/LoaiKhoanthu/LoaiKhoanthuGetList");
+            response.EnsureSuccessStatusCode();
+            _list = await response.Content.ReadFromJsonAsync<List<LoaiKhoanthu>>() ?? new();
+            ErrMessage = "";
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            ErrMessage = e.Message; // Sửa lỗi shadow variable
+        }
+    }
+
+    public void Export(string type)
+    {
+        try
+        {
+            Query q = new()
+                {
+                    OrderBy = grid.Query.OrderBy,
+                    Filter = grid.Query.Filter,
+                    Select = string.Join(",", grid.ColumnsCollection.Where(c => c.GetVisible()))
+                };
+            service.Export("LoaiKhoanthus", type, q); // Sửa tên bảng cho nhất quán
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            ErrMessage = e.Message;
+        }
+    }
+}

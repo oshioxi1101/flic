@@ -1,0 +1,517 @@
+﻿@page "/StudentInlineEditList"
+@using Flic.Shared
+@using System.Net.Http.Headers
+@inject HttpClient _httpClient
+@inject Blazored.LocalStorage.ILocalStorageService _localStorage
+@inject NavigationManager NavigationManager
+@inject NorthwindService service
+@inject IJSRuntime JsRuntime
+
+<!-- Import Tailwind CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+<div class="min-h-screen bg-gray-100">
+    <PageTitle>Danh sách Sinh viên</PageTitle>
+
+    <AuthorizeView>
+        <NotAuthorized>
+            <div class="flex items-center justify-center h-screen">
+                <span class="text-xl font-semibold text-red-600">Bạn không được phép truy cập</span>
+            </div>
+        </NotAuthorized>
+        <Authorized Context="Auth">
+            <div class="container mx-auto p-4 sm:p-6">
+                <!-- Header -->
+                <div class="mb-6">
+                    <h3 class="text-2xl font-bold text-gray-800">Danh sách Sinh viên</h3>
+                </div>
+
+                <!-- Toolbar -->
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <button @onclick="InsertRow" 
+                                disabled="@(editMode == DataGridEditMode.Single && ordersToInsert.Count() > 0)"
+                                class="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-400">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            Thêm mới
+                        </button>
+                        <button @onclick="@(() => OnClick("/StudentImport"))"
+                                class="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                            Import
+                        </button>
+                    </div>
+                    <div class="flex-1 max-w-md">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Khóa học</label>
+                        <RadzenDropDown Data="@KhoahocList" TextProperty="Name" ValueProperty="Id" 
+                                        @bind-Value="@maKhoahoc" Placeholder="--Chọn Khóa học--"
+                                        AllowClear="true" Multiple="true" TValue="List<string>" 
+                                        Change="@OnChange"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    </div>
+                    <button @onclick="@(() => Export("excel"))"
+                            class="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5H4"></path>
+                        </svg>
+                        Export XLS
+                    </button>
+                </div>
+
+                <!-- Data Grid -->
+                <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                    <RadzenDataGrid @ref="ordersGrid" 
+                                    AllowAlternatingRows="false" 
+                                    AllowPaging="true" 
+                                    AllowFiltering="true" 
+                                    FilterMode="FilterMode.Advanced"
+                                    PageSize="30" 
+                                    AllowSorting="true" 
+                                    EditMode="@editMode" 
+                                    Data="@list" 
+                                    TItem="Student" 
+                                    RowUpdate="@OnUpdateRow"
+                                    RowCreate="@OnCreateRow" 
+                                    Sort="(args => Reset())"
+                                    Page="(args => Reset())" 
+                                    Filter="(args => Reset())"
+                                    class="w-full">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="Student" Property="id" Title="ID" Width="80px" Filterable="false" Frozen="true" 
+                                                  class="bg-gray-50 font-semibold text-gray-700" />
+                            
+                            <RadzenDataGridColumn TItem="Student" Property="@nameof(Student.MaSV)" Title="Mã sinh viên">
+                                <EditTemplate Context="order">
+                                    <RadzenTextBox @bind-Value="order.MaSV" 
+                                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                                                  Name="MaSV" aria-label="Nhập mã sinh viên" />
+                                    <RadzenRequiredValidator Text="Mã sinh viên không được trống" Component="MaSV" Popup="true" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="Student" Property="@nameof(Student.HoDem)" Title="Họ đệm" Width="160px">
+                                <EditTemplate Context="order">
+                                    <RadzenTextBox @bind-Value="order.HoDem" 
+                                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                                                  Name="Hodem" aria-label="Nhập họ đệm" />
+                                    <RadzenRequiredValidator Text="Họ đệm không được trống" Component="Hodem" Popup="true" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="Student" Property="@nameof(Student.Ten)" Title="Tên">
+                                <EditTemplate Context="order">
+                                    <RadzenTextBox @bind-Value="order.Ten" 
+                                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                                                  Name="Ten" aria-label="Nhập tên" />
+                                    <RadzenRequiredValidator Text="Tên không được trống" Component="Ten" Popup="true" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="Student" Property="@nameof(Student.Ngaysinh)" Title="Ngày sinh">
+                                <EditTemplate Context="order">
+                                    <RadzenTextBox @bind-Value="order.Ngaysinh" 
+                                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                                                  Name="Ngaysinh" aria-label="Nhập ngày sinh" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="Student" Property="@nameof(Student.CCCD)" Title="CCCD">
+                                <EditTemplate Context="order">
+                                    <RadzenTextBox @bind-Value="order.CCCD" 
+                                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                                                  Name="CCCD" aria-label="Nhập CCCD" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="Student" Property="@nameof(Student.KhoahocID)" Title="Khóa" Width="80px">
+                                <EditTemplate Context="order">
+                                    <RadzenDropDown @bind-Value="order.KhoahocID" 
+                                                    Data="@KhoahocList" 
+                                                    TextProperty="@nameof(Khoahoc.Name)"
+                                                    ValueProperty="@nameof(Khoahoc.Id)"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                    InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Chọn Khóa" }})" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="Student" Property="@nameof(Student.KhoaID)" Title="Khoa" Width="80px">
+                                <EditTemplate Context="order">
+                                    <RadzenDropDown @bind-Value="order.KhoaID" 
+                                                    Data="@KhoaList" 
+                                                    TextProperty="@nameof(Khoa.Name)"
+                                                    ValueProperty="@nameof(Khoa.Id)"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                    InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Chọn Khoa" }})" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="Student" Property="NganhID" Title="Ngành" Width="150px"
+                                                  Type="typeof(IEnumerable<string>)" FilterValue="@selectedNganh" FilterOperator="FilterOperator.Contains">
+                                <EditTemplate Context="order">
+                                    <RadzenDropDown @bind-Value="order.NganhID" 
+                                                    Data="@NganhList" 
+                                                    TextProperty="@nameof(Nganh.Name)" 
+                                                    ValueProperty="@nameof(Nganh.Id)"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                    InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Chọn ngành" }})" />
+                                </EditTemplate>
+                                <FilterTemplate>
+                                    <RadzenDropDown @bind-Value="@selectedNganh" 
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                                    Change="@OnSelectedNganhChange" 
+                                                    Data="@NganhList" 
+                                                    TextProperty="@nameof(Nganh.Name)"
+                                                    ValueProperty="@nameof(Nganh.Id)" 
+                                                    AllowClear="true" 
+                                                    Multiple="true" />
+                                </FilterTemplate>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="Student" Property="LopID" Title="Lớp" Width="100px"
+                                                  Type="typeof(IEnumerable<string>)" FilterValue="@selectedLop" FilterOperator="FilterOperator.Contains">
+                                <EditTemplate Context="order">
+                                    <RadzenDropDown @bind-Value="order.LopID" 
+                                                    Data="@LopList" 
+                                                    TextProperty="@nameof(Lop.Name)" 
+                                                    ValueProperty="@nameof(Lop.Id)"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                    InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Chọn lớp" }})" />
+                                </EditTemplate>
+                                <FilterTemplate>
+                                    <RadzenDropDown @bind-Value="@selectedLop" 
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                                    Change="@OnSelectedLopChange" 
+                                                    Data="@LopList" 
+                                                    TextProperty="@nameof(Lop.Name)"
+                                                    ValueProperty="@nameof(Lop.Id)" 
+                                                    AllowClear="true" 
+                                                    Multiple="true" />
+                                </FilterTemplate>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="Student" Property="@nameof(Student.Trangthai)" Title="Trạng thái" Width="150px">
+                                <EditTemplate Context="order">
+                                    <RadzenDropDown @bind-Value="order.Trangthai" 
+                                                    Data="@TrangthaiList" 
+                                                    TextProperty="@nameof(StudentStatus.Name)"
+                                                    ValueProperty="@nameof(StudentStatus.Id)"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                    InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Chọn trạng thái" }})" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="Student" Context="order" Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true">
+                                <Template Context="order">
+                                    <div class="flex space-x-2">
+                                        <button @onclick="(args => EditRow(order))" 
+                                                class="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                            </svg>
+                                        </button>
+                                        <button @onclick="(args => DeleteRow(order))" 
+                                                class="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </Template>
+                                <EditTemplate Context="order">
+                                    <div class="flex space-x-2">
+                                        <button @onclick="(args => SaveRow(order))" 
+                                                class="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                            </svg>
+                                        </button>
+                                        <button @onclick="(args => CancelEdit(order))" 
+                                                class="p-2 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200 transition">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                            </svg>
+                                        </button>
+                                        <button @onclick="(args => DeleteRow(order))" 
+                                                class="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+                </div>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    // Code-behind giữ nguyên như mã gốc của bạn
+    List<Student> list;
+    List<Student> Orglist;
+    string ErrMessage = "";
+    RadzenDataGrid<Student> grid;
+
+    private List<Khoahoc> KhoahocList;
+    IEnumerable<string> selectedDotthi;
+    List<bool> DuDKthiList = new List<bool>();
+    IEnumerable<bool> selectedDuDKThi;
+    bool isLoading;
+    int count;
+    List<string> maKhoahoc;
+    object selectedValue;
+    List<string> nganhList = new List<string>();
+    IEnumerable<string> selectedNganh;
+    List<string> lopList = new List<string>();
+    IEnumerable<string> selectedLop;
+    List<string> trangthaiFilterList = new List<string>();
+    List<Nganh> NganhList;
+    List<Lop> LopList;
+    List<Khoa> KhoaList = new List<Khoa>();
+    List<StudentStatus> TrangthaiList = new List<StudentStatus>();
+    IEnumerable<string> selectedTrangthai;
+    RadzenDataGrid<Student> ordersGrid;
+    DataGridEditMode editMode = DataGridEditMode.Single;
+    List<Student> ordersToInsert = new List<Student>();
+    List<Student> ordersToUpdate = new List<Student>();
+
+    void Reset()
+    {
+        ordersToInsert.Clear();
+        ordersToUpdate.Clear();
+    }
+
+    void Reset(Student order)
+    {
+        ordersToInsert.Remove(order);
+        ordersToUpdate.Remove(order);
+    }
+
+    async Task EditRow(Student order)
+    {
+        if (editMode == DataGridEditMode.Single && ordersToInsert.Count() > 0)
+        {
+            Reset();
+        }
+        ordersToUpdate.Add(order);
+        await ordersGrid.EditRow(order);
+    }
+
+    async Task OnUpdateRow(Student order)
+    {
+        Reset(order);
+        var response = await _httpClient.PutAsJsonAsync("api/Student/StudentUpdate", @order);
+        if (response.IsSuccessStatusCode)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "Saved Successfully!");
+        }
+    }
+
+    async Task SaveRow(Student order)
+    {
+        await ordersGrid.UpdateRow(order);
+    }
+
+    async void CancelEdit(Student order)
+    {
+        Reset(order);
+        ordersGrid.CancelEditRow(order);
+        Student item = new Student();
+        try
+        {
+            if (order.id > 0)
+            {
+                item = await _httpClient.GetFromJsonAsync<Student>("api/Student/StudentGetByID/" + order.id);
+                var result = from r in list where r.id == order.id select r;
+                result.First().HoDem = item.HoDem;
+                result.First().Ten = item.Ten;
+                result.First().MaSV = item.MaSV;
+                result.First().NganhID = item.NganhID;
+                result.First().LopID = item.LopID;
+                result.First().Trangthai = item.Trangthai;
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    async Task DeleteRow(Student order)
+    {
+        Reset(order);
+        if (list.Contains(order))
+        {
+            try
+            {
+                var response = await _httpClient.DeleteAsync("api/Student/StudentDelete/" + order.id);
+                list.Remove(order);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            await ordersGrid.Reload();
+        }
+        else
+        {
+            ordersGrid.CancelEditRow(order);
+            await ordersGrid.Reload();
+        }
+    }
+
+    async Task InsertRow()
+    {
+        if (editMode == DataGridEditMode.Single)
+        {
+            Reset();
+        }
+        var order = new Student();
+        ordersToInsert.Add(order);
+        await ordersGrid.InsertRow(order);
+    }
+
+    async void OnCreateRow(Student order)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("api/Student/StudentAdd", @order);
+        }
+        catch (Exception e)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "Error:" + e.Message);
+        }
+        ordersToInsert.Remove(order);
+    }
+
+    void OnClick(string link)
+    {
+        NavigationManager.NavigateTo(link, true);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            KhoahocList = await _httpClient.GetFromJsonAsync<List<Khoahoc>>("api/Khoahoc/KhoahocGetList");
+            NganhList = await _httpClient.GetFromJsonAsync<List<Nganh>>("api/Nganh/NganhGetList");
+            KhoaList = await _httpClient.GetFromJsonAsync<List<Khoa>>("api/Khoa/KhoaGetList");
+            if (NganhList != null)
+            {
+                foreach (var it in NganhList)
+                {
+                    nganhList.Add(it.Id);
+                }
+            }
+            LopList = await _httpClient.GetFromJsonAsync<List<Lop>>("api/Lop/LopGetList");
+            if (LopList != null)
+            {
+                foreach (var it in LopList)
+                {
+                    lopList.Add(it.Id);
+                }
+            }
+            TrangthaiList = await _httpClient.GetFromJsonAsync<List<StudentStatus>>("api/StudentStatus/StudentStatusGetList");
+            if (TrangthaiList != null)
+            {
+                foreach (var it in TrangthaiList)
+                {
+                    trangthaiFilterList.Add(it.Id);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            string ErrMessage = e.Message;
+        }
+    }
+
+    async Task OnSelectedNganhChange(object value)
+    {
+        if (selectedNganh != null && !selectedNganh.Any())
+        {
+            selectedNganh = null;
+        }
+        var a = await _httpClient.GetFromJsonAsync<List<Lop>>("api/Lop/LopGetList");
+        if (selectedNganh != null)
+        {
+            LopList = a.Where(m => maKhoahoc.Contains(m.KhoahocID)).Where(m => selectedNganh.Contains(m.NganhID)).ToList();
+        }
+        else
+        {
+            LopList = a.Where(m => maKhoahoc.Contains(m.KhoahocID)).ToList();
+        }
+        selectedLop = null;
+        await ordersGrid.FirstPage();
+    }
+
+    async Task OnSelectedLopChange(object value)
+    {
+        if (selectedLop != null && !selectedLop.Any())
+        {
+            selectedLop = null;
+        }
+        await ordersGrid.FirstPage();
+    }
+
+    async Task OnSelectedTrangthaiChange(object value)
+    {
+        if (selectedTrangthai != null && !selectedTrangthai.Any())
+        {
+            selectedTrangthai = null;
+        }
+        await ordersGrid.FirstPage();
+    }
+
+    public void Export(string type)
+    {
+        try
+        {
+            Query q = new Query()
+            {
+                OrderBy = grid.Query.OrderBy,
+                Filter = grid.Query.Filter,
+                Select = string.Join(",", grid.ColumnsCollection.Where(c => c.GetVisible()))
+            };
+            string combinedString = string.Join(";", maKhoahoc.ToArray());
+            service.Export2("Students", type, q, combinedString);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+    }
+
+    private async void OnChange(object args)
+    {
+        if (maKhoahoc != null && maKhoahoc.Count > 0)
+        {
+            string combinedString = string.Join(";", maKhoahoc.ToArray());
+            var response = await _httpClient.GetAsync("api/Student/GetStudentList/" + combinedString);
+            if (response.IsSuccessStatusCode)
+            {
+                list = await response.Content.ReadFromJsonAsync<List<Student>>();
+                if (LopList != null)
+                {
+                    var _khoahoc = maKhoahoc.ToArray();
+                    var list = LopList.Where(t => _khoahoc.Contains(t.KhoahocID)).ToList();
+                    lopList.Clear();
+                    foreach (var it in list)
+                    {
+                        lopList.Add(it.Id);
+                    }
+                }
+                InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+}
