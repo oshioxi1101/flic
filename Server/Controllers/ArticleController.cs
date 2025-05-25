@@ -57,27 +57,38 @@ namespace Flic.Server.Controllers
                 return BadRequest(e.Message + " - " + e.InnerException);            
             }
         }
-        [Authorize]
+
+        //[Authorize]
         [HttpPut("ArticleUpdate")]
-        public void ArticleUpdate(Article item)
+        public IActionResult ArticleUpdate([FromBody] Article item)
         {
-            _Interface.Update(item);
+            try
+            {
+                _Interface.Update(item);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
-        [Authorize]
+
+
+        //[Authorize]
         [HttpDelete("ArticleDelete/{id}")]
-        public bool ArticleDelete(int id)
+        public IActionResult ArticleDelete(int id)
         {
             try
             {
                 _Interface.Delete(id);
-                return true;
+                return Ok(true);
             }
             catch (Exception e)
             {
                 Console.WriteLine("ERROR: Delete Lop ID " + id + " " + e.Message);
-                return false;
+                return BadRequest("Delete failed: " + e.Message);
             }
-
         }
+
     }
 }

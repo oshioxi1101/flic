@@ -45,7 +45,7 @@ namespace Flic.Server.Controllers
             }
             return NotFound();
         }
-        [Authorize]
+        //[Authorize]
         [HttpPost("LopAdd")]
         public async Task<IActionResult> LopAdd(Lop item)
         {
@@ -59,13 +59,13 @@ namespace Flic.Server.Controllers
                 return BadRequest();
             }
         }
-        [Authorize]
+        //[Authorize]
         [HttpPut("LopUpdate")]
         public void LopUpdate(Lop item)
         {
             _ILop.Update(item);
         }
-        [Authorize]
+        //[Authorize]
         [HttpDelete("LopDelete/{id}")]
         public bool LopDelete(string id)
         {

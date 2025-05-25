@@ -57,13 +57,13 @@ namespace Flic.Server.Controllers
                 return BadRequest();
             }
         }
-        [Authorize]
+        //[Authorize]
         [HttpPut("SectionUpdate")]
         public void SectionUpdate(Section item)
         {
             _Interface.Update(item);
         }
-        [Authorize]
+        //[Authorize]
         [HttpDelete("SectionDelete/{id}")]
         public bool SectionDelete(int id)
         {

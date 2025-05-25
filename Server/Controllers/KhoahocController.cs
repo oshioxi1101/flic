@@ -33,7 +33,7 @@ namespace Flic.Server.Controllers
             }
             return NotFound();
         }
-        [Authorize]
+        //[Authorize]
         [HttpPost("KhoahocAdd")]
         public async Task<IActionResult> KhoahocAdd(Khoahoc item)
         {
@@ -48,7 +48,7 @@ namespace Flic.Server.Controllers
             }
 
         }
-        [Authorize]
+        //[Authorize]
         [HttpPut("KhoahocUpdate")]
         public bool KhoahocUpdate(Khoahoc item)
         {
@@ -63,7 +63,7 @@ namespace Flic.Server.Controllers
             }
             
         }
-        [Authorize]
+        //[Authorize]
         [HttpDelete("KhoahocDelete/{id}")]
         public bool KhoahocDelete(string id)
         {

@@ -1,54 +1,52 @@
-Tk user 
-001202028466
-ntienanh68@gmail.com
-123456
-user1234
-nyhyca1245@fivermail.com
+🔑 Tài khoản người dùng
+Username: user1234
+Email: nyhyca1245@fivermail.com
 
-quan1234
-minide5228@blondmail.com
-Sothutu123@
+Username: quan1234
+Email: minide5228@blondmail.com
+Password: Sothutu123@
 
-quan12345
-polymi1826@getnada.com
-Sothutu123@
-Dữ lieu
+Username: quan12345
+Email: polymi1826@getnada.com
+Password: Sothutu123@
+
+Số điện thoại:
+
 0987123456
+
 0354879651234
 
-20258794
+Mã số (có thể là CCCD): 20258794
 
+👨‍💼 Tài khoản Admin
+Username: admin123
+Password: admin123
 
-tk admin
-admin123
-admin123
+🧑‍💼 Tài khoản Quản lý
+Username: quanly
+Email: kerobu413@blondmail.com
 
-tk QUANLY
-095302006283
-maingochaks@gmai.com
-123456
+👨‍🎓 Tài khoản Tin03
+Mã sinh viên: 001202003104
+Email: haâhy9a@gmail.com
+Password: 123456
 
-quanly
-kerobu413@blondmail.com
+CCCD: 095302006283
+Email: maingochaks@gmai.com
+Password: 123456
 
-tk Tin03
-001202003104
-haâhy9a@gmail.com
-123456
+CCCD: 038203002321
+Email: minharsenal132003@gmail.com
+Password: 123456
 
+Mã sinh viên: 001202028466
+Email: ntienanh68@gmail.com
+Password: 123456
 
-tk Ke Toan
-038203002321
-minharsenal132003@gmail.com
-123456
+💰 Tài khoản Kế Toán
+Username: ketoan1
+Email: hekove253@replyloop.com
 
-ketoan1
-hekove253@replyloop.com
-
-KETOAN
-KETOAN@gmail.com
-KETOAN@gmail.com
-
-
-CCCD 001204015661
-
+Username: KETOAN
+Email: KETOAN@gmail.com
+Password: KETOAN@gmail.com

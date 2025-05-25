@@ -147,7 +147,7 @@
         try
         {
             item.UpdateDate = DateTime.Now;
-            var response = await Http.PutAsJsonAsync("api/Article/ArticleUpdate", @item);
+            var response = await Http.PutAsJsonAsync("api/Article/ArticleUpdate/", @item);
             if (response.IsSuccessStatusCode)
             {
                 await JsRuntime.InvokeVoidAsync("alert", "Saved Successfully!");

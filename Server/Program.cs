@@ -1,22 +1,21 @@
-﻿using DinkToPdf;
-using DinkToPdf.Contracts;
-using Flic;
-using Flic.Server.Configuration;
-using Flic.Server.Data;
+﻿using Flic.Server.Data;
 using Flic.Server.Interfaces;
 using Flic.Server.Services;
-using Flic.Shared;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
-using Radzen;
 using System.Text;
+using Radzen;
+using Flic.Shared;
+using Flic;
+using Flic.Server.Configuration;
+using DinkToPdf.Contracts;
+using DinkToPdf;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.Http.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 ConfigurationManager configuration = builder.Configuration;
@@ -57,32 +56,16 @@ builder.Services.AddAuthentication(options =>
     // Cookies giữ state giữa các bước OAuth
     options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
     options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    // Khi challenge (ví dụ gọi [Authorize]) thì bật Google
-    options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
 })
 .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, cookieOptions =>
 {
     cookieOptions.Cookie.Name = "FlicAuthCookie";
     cookieOptions.Cookie.HttpOnly = true;
-    cookieOptions.Cookie.SameSite = SameSiteMode.Lax;      // QUAN TRỌNG: Để Lax, KHÔNG để None trên localhost!
-    cookieOptions.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    cookieOptions.Cookie.SameSite = SameSiteMode.None;
+    cookieOptions.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+
 })
 
-.AddGoogle(GoogleDefaults.AuthenticationScheme, googleOptions =>
-{
-    googleOptions.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    googleOptions.ClientId = configuration["Authentication:Google:ClientId"];
-    googleOptions.ClientSecret = configuration["Authentication:Google:ClientSecret"];
-    googleOptions.CallbackPath = "/api/GoogleAuth/callback";
-    googleOptions.Scope.Add("profile");
-    googleOptions.Scope.Add("email");
-
-    // Cookie correlation
-    googleOptions.CorrelationCookie.SameSite = SameSiteMode.Lax;   // QUAN TRỌNG
-    googleOptions.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
-    googleOptions.CorrelationCookie.HttpOnly = true;
-    googleOptions.CorrelationCookie.Path = "/";
-})
 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, jwtOptions =>
 {
     jwtOptions.SaveToken = true;
@@ -104,11 +87,9 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsPolicy", policy =>
-    policy.WithOrigins("https://localhost:5021")
-          .AllowAnyHeader()
-          .AllowAnyMethod()
-          .AllowCredentials());
-
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader());
 });
 
 // === 6. JSON options ===
@@ -202,7 +183,7 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseRouting();
 
-// **Chèn Authentication & Authorization middleware**
+// Chèn Authentication & Authorization middleware
 app.UseAuthentication();
 app.UseAuthorization();
 

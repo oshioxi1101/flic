@@ -21,7 +21,7 @@ using System.Xml.Serialization;
 
 namespace eBHYT.Server.Controllers
 {
-    [Authorize]
+    //[Authorize]
     [Route("api/[controller]")]
     [ApiController]
     

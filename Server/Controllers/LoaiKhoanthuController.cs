@@ -44,21 +44,21 @@ namespace Flic.Server.Controllers
             var item = _ILoaiKhoanthu.Get(id);
             return Ok(item);
         }
-        [Authorize]
+        //[Authorize]
         [HttpPost("LoaiKhoanthuAdd")]
         public async Task<IActionResult> LoaiKhoanthuAdd(LoaiKhoanthu item)
         {
             var rs = _ILoaiKhoanthu.Add(item);
             return Ok(rs);
         }
-        [Authorize]
+        //[Authorize]
         [HttpPut("LoaiKhoanthuUpdate")]
         public async Task<IActionResult> LoaiKhoanthuUpdate(LoaiKhoanthu item)
         {
             var rs = _ILoaiKhoanthu.Update(item);
             return Ok(rs);
         }
-        [Authorize]
+        //[Authorize]
         [HttpDelete("LoaiKhoanthuDelete/{id}")]
         public async Task<IActionResult> LoaiKhoanthuDelete(string id)
         {

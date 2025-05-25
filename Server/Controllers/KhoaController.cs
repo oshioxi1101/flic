@@ -33,7 +33,7 @@ namespace Flic.Server.Controllers
             }
             return NotFound();
         }
-        [Authorize]
+        //[Authorize]
         [HttpPost("KhoaAdd")]
         public async Task<IActionResult> KhoaAdd(Khoa item)
         {
@@ -52,7 +52,7 @@ namespace Flic.Server.Controllers
             }
         }
 
-        [Authorize]
+        //[Authorize]
         [HttpPut("KhoaUpdate")]
         public bool KhoaUpdate(Khoa item)
         {
@@ -68,7 +68,7 @@ namespace Flic.Server.Controllers
             }
             
         }
-        [Authorize]
+        //[Authorize]
         [HttpDelete("KhoaDelete/{id}")]
         public bool KhoaDelete(string id)
         {

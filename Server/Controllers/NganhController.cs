@@ -80,7 +80,7 @@ namespace Flic.Server.Controllers
             }
             return NotFound();
         }
-        [Authorize]
+        //[Authorize]
         [HttpPost("NganhAdd")]
         public async Task<IActionResult> NganhAdd(Nganh item)
         {
@@ -94,7 +94,7 @@ namespace Flic.Server.Controllers
                 return BadRequest();
             }
         }
-        [Authorize]
+        //[Authorize]
         [HttpPut("NganhUpdate")]
         public bool NganhUpdate(Nganh item)
         {
@@ -109,7 +109,7 @@ namespace Flic.Server.Controllers
             }
             
         }
-        [Authorize]
+        //[Authorize]
         [HttpDelete("NganhDelete/{id}")]
         public bool NganhDelete(string id)
         {

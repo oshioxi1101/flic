@@ -1,6 +1,5 @@
 ﻿using Flic.Shared;
 using Flic.Shared.Models;
-using Flic.Shared.Models.Auth;
 using Flic.Shared.Models.TaiChinh;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
